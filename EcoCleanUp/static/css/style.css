@@ -1,0 +1,33 @@
+:root{
+  --eco-700:#16624a;
+  --eco-900:#0f3d2e;
+}
+
+/* Theme overrides only (no custom layout system) */
+.eco-header{
+  background: var(--eco-700);
+}
+
+.btn-eco{
+  background: var(--eco-700);
+  border-color: var(--eco-700);
+  font-weight: 600;
+}
+.btn-eco:hover{
+  background: var(--eco-900);
+  border-color: var(--eco-900);
+}
+
+.link-eco{
+  color: var(--eco-700);
+  text-decoration: none;
+  font-weight: 600;
+}
+.link-eco:hover{
+  color: var(--eco-900);
+  text-decoration: underline;
+}
+
+.eco-card{
+  border-radius: 16px;
+}

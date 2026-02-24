@@ -1,0 +1,118 @@
+{% extends "base_public.html" %}
+
+{% block title %}EcoCleanUp | Sign up{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-7">
+
+    <div class="card shadow-sm border-0 eco-card">
+      <div class="card-header eco-header border-0 text-white text-center py-4">
+        <div class="fw-bold fs-4">EcoCleanUp</div>
+        <div class="opacity-75 small">Volunteer Registration</div>
+      </div>
+
+      <div class="card-body p-4">
+        {% if signup_successful %}
+          <div class="alert alert-success">
+            Account created successfully. You can now
+            <a class="alert-link" href="{{ url_for('login') }}">log in</a>.
+          </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" novalidate>
+          <div class="row g-3">
+
+            <div class="col-md-6">
+              <label class="form-label" for="username">Username</label>
+              <input class="form-control{% if username_error %} is-invalid{% endif %}"
+                     id="username" name="username" maxlength="50"
+                     value="{{ username|default('') }}" required>
+              <div class="invalid-feedback">{{ username_error }}</div>
+              <div class="form-text">
+                Must be <strong>unique</strong>. Use letters/numbers/dots only (e.g. liam.brown).
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label" for="email">Email</label>
+              <input class="form-control{% if email_error %} is-invalid{% endif %}"
+                     id="email" name="email" type="email" maxlength="100"
+                     value="{{ email|default('') }}" required>
+              <div class="invalid-feedback">{{ email_error }}</div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label" for="full_name">Full name</label>
+              <input class="form-control{% if full_name_error %} is-invalid{% endif %}"
+                     id="full_name" name="full_name" maxlength="100"
+                     value="{{ full_name|default('') }}" required>
+              <div class="invalid-feedback">{{ full_name_error }}</div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label" for="contact_number">Contact number</label>
+              <input class="form-control{% if contact_error %} is-invalid{% endif %}"
+                     id="contact_number" name="contact_number" maxlength="20"
+                     value="{{ contact_number|default('') }}" required>
+              <div class="invalid-feedback">{{ contact_error }}</div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label" for="profile_image">Profile image (optional)</label>
+              <input class="form-control{% if image_error %} is-invalid{% endif %}"
+                     id="profile_image" name="profile_image"
+                     type="file" accept=".png,.jpg,.jpeg,.gif,.webp">
+              <div class="invalid-feedback">{{ image_error }}</div>
+              <div class="form-text">Images are stored as files; database stores filename only.</div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label" for="home_address">Home address</label>
+              <input class="form-control{% if address_error %} is-invalid{% endif %}"
+                     id="home_address" name="home_address" maxlength="255"
+                     value="{{ home_address|default('') }}" required>
+              <div class="invalid-feedback">{{ address_error }}</div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label" for="environmental_interests">Environmental interests</label>
+              <input class="form-control{% if interests_error %} is-invalid{% endif %}"
+                     id="environmental_interests" name="environmental_interests" maxlength="255"
+                     value="{{ environmental_interests|default('') }}" required>
+              <div class="invalid-feedback">{{ interests_error }}</div>
+              <div class="form-text">e.g. recycling, beach cleanups, tree planting</div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label" for="password">Password</label>
+              <input class="form-control{% if password_error %} is-invalid{% endif %}"
+                     id="password" name="password" type="password" required>
+              <div class="invalid-feedback">{{ password_error }}</div>
+              <div class="form-text">
+                Minimum <strong>8</strong> characters, and must include:
+                <strong>uppercase</strong>, <strong>lowercase</strong>,
+                <strong>number</strong>, and <strong>special character</strong>.
+              </div>
+            </div>
+
+            <div class="col-12 d-grid d-sm-flex gap-2 mt-2">
+              <button class="btn btn-eco px-4" type="submit">Create account</button>
+              <a class="btn btn-outline-secondary px-4" href="{{ url_for('login') }}">Back to login</a>
+            </div>
+
+          </div>
+        </form>
+      </div>
+
+      <div class="card-footer bg-white text-center py-3">
+        <div class="small text-muted">
+          New accounts are created as <strong>volunteers</strong> with status <strong>active</strong>.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
