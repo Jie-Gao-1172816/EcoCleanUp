@@ -4,7 +4,7 @@ EcoCleanUp is my individual COMP639 web application.
 It is a Flask web app with a PostgreSQL database.
 It supports three roles: **Volunteer**, **Event Leader**, and **Admin**.
 
-This repository is a **private** GitHub repository named **EcoCleanUp** and includes everything needed for marking and deployment.
+This repository is a  GitHub repository named **EcoCleanUp** and includes everything needed for marking and deployment.
 
 ---
 
