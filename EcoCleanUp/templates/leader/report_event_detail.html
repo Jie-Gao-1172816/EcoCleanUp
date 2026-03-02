@@ -1,0 +1,133 @@
+
+{% extends "userbase.html" %}
+{% set active_page = 'reports' %}
+{% block title %}Event Report Detail{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-10">
+
+    <!-- Header + right actions -->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2 mb-3">
+      <div class="me-md-3">
+        <h1 class="h4 mb-0">Event Report Detail</h1>
+        <div class="text-muted small">{{ event.event_name }} • {{ event.event_date }}</div>
+      </div>
+
+      <div class="ms-md-auto d-flex flex-column flex-sm-row gap-2">
+        <a class="btn btn-outline-eco eco-action-btn" href="{{ url_for('leader_reports') }}">Back to Reports</a>
+        <a class="btn btn-outline-eco eco-action-btn" href="{{ url_for('leader_home') }}">Back to Dashboard</a>
+      </div>
+    </div>
+
+    <!-- Event info -->
+    <div class="eco-card card shadow-sm border-0 mb-3">
+      <div class="card-body">
+        <div><span class="fw-semibold">Date:</span> {{ event.event_date }}</div>
+        <div>
+          <span class="fw-semibold">Time:</span>
+          {{ event.start_time }}{% if event.end_time %} – {{ event.end_time }}{% endif %}
+        </div>
+        <div><span class="fw-semibold">Location:</span> {{ event.location }}</div>
+        <div><span class="fw-semibold">Leader:</span> {{ event.leader_name }}</div>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-md-6">
+        <div class="eco-card card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <div class="fw-semibold mb-1">Attendance summary</div>
+            <div class="small text-muted">
+              Registered: <span class="text-dark fw-semibold">{{ att_sum.registered_count or 0 }}</span><br>
+              Attended: <span class="text-dark fw-semibold">{{ att_sum.attended_count or 0 }}</span><br>
+              Absent: <span class="text-dark fw-semibold">{{ att_sum.absent_count or 0 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <div class="eco-card card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <div class="fw-semibold mb-1">Volunteer engagement</div>
+            <div class="small text-muted">
+              Feedback: <span class="text-dark fw-semibold">{{ fb_sum.feedback_count or 0 }}</span><br>
+              Avg rating:
+              <span class="text-dark fw-semibold">{{ fb_sum.avg_rating if fb_sum.avg_rating is not none else '-' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Volunteers -->
+    <div class="eco-card card shadow-sm border-0 mb-3">
+      <div class="card-body">
+        <h2 class="h6 mb-2">Volunteers</h2>
+
+        {% if volunteers and volunteers|length > 0 %}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr class="text-muted small">
+                  <th>Name</th>
+                  <th class="text-nowrap">Contact</th>
+                  <th class="text-end">Attendance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for v in volunteers %}
+                  <tr>
+                    <td>{{ v.full_name }}</td>
+                    <td class="text-nowrap">{{ v.contact_number or '-' }}</td>
+                    <td class="text-end">{{ v.attendance }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="text-muted">No volunteers registered.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Feedback -->
+    <div class="eco-card card shadow-sm border-0">
+      <div class="card-body">
+        <h2 class="h6 mb-2">Feedback</h2>
+
+        {% if feedback_rows and feedback_rows|length > 0 %}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr class="text-muted small">
+                  <th>Name</th>
+                  <th class="text-end">Rating</th>
+                  <th>Comments</th>
+                  <th class="text-end">Submitted</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for f in feedback_rows %}
+                  <tr>
+                    <td>{{ f.full_name }}</td>
+                    <td class="text-end">{{ f.rating }}</td>
+                    <td>{{ f.comments or '' }}</td>
+                    <td class="text-end">{{ f.submitted_at }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="text-muted">No feedback submitted.</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

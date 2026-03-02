@@ -1,0 +1,134 @@
+{% extends "userbase.html" %}
+{% set active_page = 'home' %}
+{% block title %}Event Details{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-10">
+
+    <!-- Event header with a single back button -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+      <div>
+        <h2 class="mb-1">{{ event['event_name'] }}</h2>
+        <div class="text-muted small">{{ event['location'] }}</div>
+      </div>
+
+      <!-- Back to events (avoid duplicate back actions) -->
+      <a class="btn btn-outline-eco " href="{{ url_for('volunteer_events') }}">
+        Back to events
+      </a>
+    </div>
+
+    <!-- Badges for type/date/status/registration -->
+    <div class="mb-3 d-flex flex-wrap gap-2">
+      <span class="badge bg-secondary">{{ event['event_type'] }}</span>
+      <span class="badge bg-light text-dark border">{{ event['event_date'] }}</span>
+
+      {% if event['is_upcoming'] %}
+        <span class="badge bg-success">Upcoming</span>
+      {% else %}
+        <span class="badge bg-dark">Past</span>
+      {% endif %}
+
+      {% if event['is_registered'] %}
+        <span class="badge bg-light text-dark border">Registered</span>
+      {% endif %}
+    </div>
+
+    <!-- Summary details: time/duration/location -->
+    <div class="card shadow-sm border-0 eco-card mb-3">
+      <div class="card-body">
+        <div class="row g-2">
+          <div class="col-12 col-md-4">
+            <div class="small text-muted">Time</div>
+            <div class="fw-semibold">{{ event['start_time'] }} - {{ event['end_time'] }}</div>
+          </div>
+          <div class="col-12 col-md-4">
+            <div class="small text-muted">Duration</div>
+            <div class="fw-semibold">{{ event['duration'] }} minutes</div>
+          </div>
+          <div class="col-12 col-md-4">
+            <div class="small text-muted">Location</div>
+            <div class="fw-semibold">{{ event['location'] }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event description -->
+    <div class="card shadow-sm border-0 eco-card mb-3">
+      <div class="card-body">
+        <div class="fw-bold mb-2">Description</div>
+        <div class="text-muted">{{ event['description'] or '' }}</div>
+      </div>
+    </div>
+
+    <!-- Supplies and safety instructions -->
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-md-6">
+        <div class="card shadow-sm border-0 eco-card h-100">
+          <div class="card-body">
+            <div class="fw-bold mb-2">Supplies</div>
+            <div class="text-muted">{{ event['supplies'] or '' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <div class="card shadow-sm border-0 eco-card h-100">
+          <div class="card-body">
+            <div class="fw-bold mb-2">Safety instructions</div>
+            <div class="text-muted">{{ event['safety_instructions'] or '' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action area: register + quick link to upcoming events -->
+    <div class="d-grid d-sm-flex gap-2 align-items-sm-center">
+
+      <!-- Register form (POST) -->
+      <form method="POST"
+            action="{{ url_for('volunteer_register_event', event_id=event['event_id']) }}"
+            class="m-0">
+
+        <!-- Disable register if event is past OR already registered -->
+        {% if not event['is_upcoming'] %}
+          <button class="btn btn-secondary eco-action-btn" type="button" disabled>
+            Registration closed
+          </button>
+
+        {% elif event['is_registered'] %}
+          <button class="btn btn-secondary eco-action-btn" type="button" disabled>
+            Registered
+          </button>
+
+        {% else %}
+          <button class="btn btn-eco eco-action-btn" type="submit">
+            Register
+          </button>
+        {% endif %}
+      </form>
+
+      <!-- Go to volunteer home (my upcoming events) -->
+      <a class="btn btn-outline-eco eco-action-btn"
+         href="{{ url_for('volunteer_home') }}">
+        My upcoming events
+      </a>
+
+      <!-- One-line helper message -->
+      <div class="text-muted small">
+        {% if not event['is_upcoming'] %}
+          This event has ended, so registration is closed.
+        {% elif event['is_registered'] %}
+          You are already registered for this event.
+        {% else %}
+          &nbsp;
+        {% endif %}
+      </div>
+
+    </div>
+
+  </div>
+</div>
+{% endblock %}

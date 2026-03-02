@@ -1,0 +1,100 @@
+{% extends "userbase.html" %}
+{% set active_page = 'home' %}
+{% block title %}Volunteer Home{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-10">
+
+    <!-- Reminders (shown once; backend clears displayed ones) -->
+    {% if reminders and reminders|length > 0 %}
+      <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>Upcoming reminders</strong>
+        <ul class="mb-0 mt-2">
+          {% for r in reminders %}
+            <li>
+              <strong>{{ r.event_name }}</strong>
+              — {{ r.event_date }} {{ r.start_time }} · {{ r.location }}
+              {% if r.reminder_message %} ({{ r.reminder_message }}){% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endif %}
+
+    <!-- Page header: title + quick navigation -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+      <div>
+        <h1 class="h4 mb-0">My Upcoming Events</h1>
+        <div class="text-muted small">Your next registered cleanup events.</div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <a class="btn btn-eco  eco-action-btn" href="{{ url_for('volunteer_events') }}">Browse Events</a>
+        <a class="btn btn-outline-eco  eco-action-btn" href="{{ url_for('volunteer_history') }}">Participation History</a>
+      </div>
+    </div>
+
+    <!-- Upcoming events cards -->
+    <div class="card shadow-sm border-0 eco-card">
+      <div class="card-body">
+        {% if upcoming and upcoming|length > 0 %}
+
+          <!-- Responsive grid: 1 col (mobile), 2 cols (tablet), 3 cols (desktop) -->
+          <div class="row g-3">
+            {% for e in upcoming %}
+              <div class="col-12 col-md-6 col-xl-4">
+                <div class="card h-100 border-0 shadow-sm">
+                  <div class="card-body d-flex flex-column">
+
+                    <!-- Card header: event name + status badge -->
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div class="fw-semibold">{{ e.event_name }}</div>
+                      <span class="badge bg-light text-dark border">Upcoming</span>
+                    </div>
+
+                    <!-- Card info: date/time/location -->
+                    <div class="mt-3 d-grid gap-2 small">
+                      <div class="d-flex justify-content-between gap-3">
+                        <div class="text-muted">Date</div>
+                        <div class="text-end text-nowrap">{{ e.event_date }}</div>
+                      </div>
+
+                      <div class="d-flex justify-content-between gap-3">
+                        <div class="text-muted">Time</div>
+                        <div class="text-end text-nowrap">{{ e.start_time }}–{{ e.end_time }}</div>
+                      </div>
+
+                      <div class="d-flex justify-content-between gap-3">
+                        <div class="text-muted">Location</div>
+                        <div class="text-end">{{ e.location }}</div>
+                      </div>
+                    </div>
+
+                    <!-- Card action: go to event detail page -->
+                    <div class="mt-auto pt-3 d-grid">
+                      <a class="btn btn-outline-eco "
+                         href="{{ url_for('volunteer_event_detail', event_id=e.event_id) }}">
+                        View details
+                      </a>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+
+        {% else %}
+          <!-- Empty state -->
+          <div class="py-4 text-center text-muted">
+            You have no upcoming registrations yet. Browse events to join a cleanup.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

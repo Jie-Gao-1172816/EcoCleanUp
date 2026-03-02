@@ -5,28 +5,60 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-12 col-md-9 col-lg-7">
+  <div class="col-12 col-md-10 col-lg-8">
 
-    <div class="card shadow-sm border-0 eco-card">
+    <!-- Main hero card -->
+    <div class="card shadow-sm border-0 eco-card mb-3">
       <div class="card-header eco-header border-0 text-white text-center py-4">
         <div class="fw-bold display-6 mb-1">EcoCleanUp</div>
         <div class="opacity-75">Community Cleanup Management System</div>
       </div>
 
       <div class="card-body p-4 p-md-5">
+        {# Hero image stored in static/images/ #}
+        <img
+          src="{{ url_for('static', filename='images/cleanup_hero.jpg') }}"
+          class="img-fluid rounded-3 mb-4 hero-img"
+          alt="Community cleanup event">
+
+        {# Program-focused description (sustainability theme) #}
+        <p class="text-muted mb-3">
+          EcoCleanUp supports community-driven sustainability by making cleanup activities easy to organise and
+          easier to participate in. The platform helps bring local volunteers together to remove rubbish from
+          public spaces and promotes responsible waste handling through consistent event records and reporting.
+        </p>
         <p class="text-muted mb-4">
-          EcoCleanUp helps volunteers, event leaders, and administrators manage community cleanup events —
-          including event creation, registrations, attendance tracking, and feedback.
+          By capturing participation, outcomes, and feedback, EcoCleanUp helps communities understand impact over time
+          and encourages ongoing environmental stewardship — one cleanup at a time.
         </p>
 
-        <div class="d-grid gap-2 d-sm-flex">
-          <a class="btn btn-eco px-4" href="{{ url_for('login') }}">Log In</a>
-          <a class="btn btn-outline-success px-4" href="{{ url_for('signup') }}">Register (Volunteer)</a>
+        <!-- Equal-width, eco-themed buttons -->
+        <div class="row g-2">
+          <div class="col-12 col-sm-6">
+            <a class="btn btn-eco w-100" href="{{ url_for('login') }}">Log In</a>
+          </div>
+          <div class="col-12 col-sm-6">
+            <a class="btn btn-eco w-100" href="{{ url_for('signup') }}">Register (Volunteer)</a>
+          </div>
         </div>
 
-        <div class="small text-muted mt-3">
-          Sustainability-focused · Mobile-friendly · Built with Bootstrap
+        <div class="small text-muted mt-3 text-center">
+          Cleaner places · Stronger communities · Measurable impact
         </div>
+      </div>
+    </div>
+
+  
+    <!-- Simple "How it works" block (volunteer-centric) -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <div class="fw-bold mb-2">Volunteer journey</div>
+        <ol class="text-muted small mb-0">
+          <li>Create an account (Volunteer registration).</li>
+          <li>Log in and register for a cleanup event.</li>
+          <li>Attend the event and follow the safety instructions provided.</li>
+          <li>Submit feedback and review recorded outcomes to see community progress.</li>
+        </ol>
       </div>
     </div>
 

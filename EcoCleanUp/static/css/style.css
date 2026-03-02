@@ -1,22 +1,44 @@
+/* =========================================================
+   EcoCleanUp Theme (final cleaned version)
+   - No duplicate rules
+   - Uses CSS variables
+   - Keeps responsive behavior (desktop tables + mobile cards)
+   ========================================================= */
+
 :root{
   --eco-700:#16624a;
   --eco-900:#0f3d2e;
+  --eco-bg:#f3f7f4;         /* soft background */
+  --eco-ring: rgba(22, 98, 74, 0.25);
+  --eco-hover-row: rgba(22, 98, 74, 0.06);
 }
 
-/* Theme overrides only (no custom layout system) */
+/* =========================================================
+   Global layout / background
+   ========================================================= */
+
 .eco-header{
   background: var(--eco-700);
 }
 
-.btn-eco{
-  background: var(--eco-700);
-  border-color: var(--eco-700);
-  font-weight: 600;
+/* Optional: softer page background (if you use bg-body-tertiary) */
+body.bg-body-tertiary{
+  background-color: var(--eco-bg);
 }
-.btn-eco:hover{
-  background: var(--eco-900);
-  border-color: var(--eco-900);
+
+/* Prevent accidental horizontal scroll from long content */
+html, body{
+  overflow-x: hidden;
 }
+
+/* Cards */
+.eco-card{
+  border-radius: 16px;
+}
+
+/* =========================================================
+   Links
+   ========================================================= */
 
 .link-eco{
   color: var(--eco-700);
@@ -28,6 +50,116 @@
   text-decoration: underline;
 }
 
-.eco-card{
-  border-radius: 16px;
+/* =========================================================
+   Buttons
+   ========================================================= */
+
+/* Primary eco button (solid) */
+.btn-eco{
+  background: var(--eco-700);
+  border: 1px solid var(--eco-700);
+  color: #fff !important;
+  font-weight: 600;
 }
+.btn-eco:hover{
+  background: var(--eco-900);
+  border-color: var(--eco-900);
+  color: #fff !important;
+}
+
+/* Outline eco button */
+.btn-outline-eco{
+  background: transparent;
+  border: 1px solid var(--eco-700);
+  color: var(--eco-700);
+  font-weight: 600;
+}
+.btn-outline-eco:hover{
+  background: var(--eco-700);
+  border-color: var(--eco-700);
+  color: #fff;
+}
+
+/* Accessible focus ring */
+.btn-eco:focus-visible,
+.btn-outline-eco:focus-visible{
+  outline: 0;
+  box-shadow: 0 0 0 .25rem var(--eco-ring);
+}
+
+/* Small filter buttons (keeps your Apply/Clear compact) */
+.eco-btn-min{
+  padding: 0.35rem 0.8rem;
+  line-height: 1.2;
+}
+
+/* Action button sizing (Details / Register / Feedback / View feedback / Leave feedback)
+   Use this class on buttons you want same size. */
+.eco-action-btn{
+  min-width: 160px;
+  text-align: center;
+  padding: 0.45rem 0.9rem;
+}
+
+/* For very small phones */
+@media (max-width: 360px){
+  .eco-action-btn{
+    min-width: 140px;
+  }
+}
+
+/* =========================================================
+   Tables
+   ========================================================= */
+
+.table-responsive{
+  -webkit-overflow-scrolling: touch;
+}
+
+.eco-table th,
+.eco-table td{
+  vertical-align: middle;
+}
+
+.eco-table tbody tr:hover{
+  background: var(--eco-hover-row);
+}
+
+/* =========================================================
+   Responsive tweaks (forms / spacing)
+   ========================================================= */
+
+@media (max-width: 576px){
+  .form-control,
+  .form-select{
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+  }
+
+  /* Slightly larger tap area for buttons on mobile */
+  .btn{
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
+
+  footer .small{
+    line-height: 1.4;
+  }
+}
+
+@media (max-width: 992px){
+  main.container,
+  main.container-fluid{
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+/* =========================================================
+   Media
+   ========================================================= */
+
+.hero-img{
+  width: 100%;
+  max-height: 260px;
+  object-fit: cover;}

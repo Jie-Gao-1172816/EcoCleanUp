@@ -1,0 +1,221 @@
+
+
+<!-- templates/volunteer/events_list.html -->
+{% extends "userbase.html" %}
+{% block content %}
+
+<div class="container my-3">
+
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h2 class="mb-0">Browse Cleanup Events</h2>
+      <div class="text-muted small">Use filters to find events. You can view all, upcoming, or past events.</div>
+    </div>
+    <a class="btn btn-outline-eco " href="{{ url_for('volunteer_home') }}">Back to Upcoming Events</a>
+  </div>
+
+  <!-- Filters -->
+  <form method="GET" class="card shadow-sm border-0 mb-3">
+    <div class="card-body">
+
+      <!-- Row 1: Scope + Date from + Date to -->
+      <div class="row g-2 align-items-end">
+        <div class="col-12 col-md-3">
+          <label class="form-label">Scope</label>
+          <select class="form-select" name="scope">
+            <option value="all" {% if scope == 'all' %}selected{% endif %}>All events</option>
+            <option value="upcoming" {% if scope == 'upcoming' %}selected{% endif %}>Upcoming</option>
+            <option value="past" {% if scope == 'past' %}selected{% endif %}>Past</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-3">
+          <label class="form-label">Date from</label>
+          <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+        </div>
+
+        <div class="col-12 col-md-3">
+          <label class="form-label">Date to</label>
+          <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+        </div>
+
+        <div class="d-none d-md-block col-md-3"></div>
+      </div>
+
+      <!-- Row 2: Type + Location -->
+      <div class="row g-2 align-items-end mt-1">
+        <div class="col-12 col-md-3">
+          <label class="form-label">Type</label>
+          <select class="form-select" name="event_type">
+            <option value="">-- All --</option>
+            {% for t in types %}
+              <option value="{{ t['event_type'] }}" {% if event_type == t['event_type'] %}selected{% endif %}>
+                {{ t['event_type'] }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <label class="form-label">Location</label>
+          <select class="form-select" name="location">
+            <option value="">-- All --</option>
+            {% for loc in locations %}
+              <option value="{{ loc['location'] }}" {% if location == loc['location'] %}selected{% endif %}>
+                {{ loc['location'] }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="d-none d-md-block col-md-3"></div>
+      </div>
+
+      <!-- Row 3: Buttons -->
+      <div class="row g-2 mt-2">
+        <div class="col-12">
+          <div class="d-flex flex-wrap gap-2 justify-content-start mt-2">
+            <button type="submit" class="btn btn-eco btn-sm" style="min-width: 140px;">
+            Apply filter
+            </button>
+
+            <a class="btn btn-outline-eco btn-sm" style="min-width: 140px;"
+            href="{{ url_for('volunteer_events') }}">
+            Reset
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </form>
+
+  {% if events and events|length > 0 %}
+
+    <!-- Desktop / large screens: table layout -->
+    <div class="d-none d-lg-block">
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 eco-table">
+              <thead class="table-light">
+                <tr>
+                  <th class="px-3 text-nowrap" style="width:130px;">Date</th>
+                  <th class="px-3 text-nowrap" style="width:190px;">Time</th>
+                  <th class="px-3">Event</th>
+                  <th class="px-3">Location</th>
+                  <th class="px-3 text-nowrap" style="width:120px;">Type</th>
+                  <th class="px-4 text-end text-nowrap" style="width:240px;">Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for e in events %}
+                  <tr>
+                    <td class="px-3 text-nowrap">{{ e['event_date'] }}</td>
+                    <td class="px-3 text-nowrap">{{ e['start_time'] }} - {{ e['end_time'] }}</td>
+                    <td class="px-3 fw-semibold">{{ e['event_name'] }}</td>
+                    <td class="px-3">{{ e['location'] }}</td>
+                    <td class="px-3 text-nowrap">{{ e['event_type'] }}</td>
+
+                    <td class="px-4 text-end">
+                      <div class="d-inline-flex flex-column gap-2 align-items-end eco-action-stack">
+                        <a class="btn  btn-eco eco-action-btn"
+                           href="{{ url_for('volunteer_event_detail', event_id=e['event_id']) }}">
+                          Details
+                        </a>
+
+                        {% if e['is_upcoming'] %}
+                          {% if e['my_attendance'] %}
+                            <span class="badge bg-success eco-action-btn text-center" style="display:inline-block;">
+                              Registered
+                            </span>
+                          {% else %}
+                            <form method="POST"
+                                  action="{{ url_for('volunteer_register_event', event_id=e['event_id']) }}"
+                                  class="m-0">
+                              <button class="btn  btn-eco eco-action-btn" type="submit">Register</button>
+                            </form>
+                          {% endif %}
+                        {% else %}
+                          <button class="btn  btn-secondary eco-action-btn" type="button" disabled>Register</button>
+
+                          {% if e['my_feedback_id'] %}
+                            <a class="btn  btn-outline-eco eco-action-btn"
+                               href="{{ url_for('volunteer_feedback', event_id=e['event_id']) }}">
+                              Feedback
+                            </a>
+                          {% endif %}
+                        {% endif %}
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile / tablet: card layout -->
+    <div class="d-block d-lg-none">
+      <div class="d-flex flex-column gap-3">
+        {% for e in events %}
+          <div class="card shadow-sm border-0 eco-card">
+            <div class="card-body">
+              <div class="d-flex justify-content-between gap-2">
+                <div class="fw-semibold">{{ e['event_name'] }}</div>
+                <span class="badge bg-light text-dark">{{ e['event_type'] }}</span>
+              </div>
+
+              <div class="text-muted small mt-2">
+                <div><strong>Date:</strong> {{ e['event_date'] }}</div>
+                <div><strong>Time:</strong> {{ e['start_time'] }} - {{ e['end_time'] }}</div>
+                <div><strong>Location:</strong> {{ e['location'] }}</div>
+              </div>
+
+              <div class="d-flex flex-wrap gap-2 mt-3">
+                <a class="btn  btn-eco eco-action-btn"
+                   href="{{ url_for('volunteer_event_detail', event_id=e['event_id']) }}">
+                  Details
+                </a>
+
+                {% if e['is_upcoming'] %}
+                  {% if e['my_attendance'] %}
+                    <span class="badge bg-success align-self-center eco-action-btn text-center" style="display:inline-block;">
+                      Registered
+                    </span>
+                  {% else %}
+                    <form method="POST"
+                          action="{{ url_for('volunteer_register_event', event_id=e['event_id']) }}"
+                          class="m-0">
+                      <button class="btn  btn-eco eco-action-btn" type="submit">Register</button>
+                    </form>
+                  {% endif %}
+                {% else %}
+                  <button class="btn  btn-secondary eco-action-btn" type="button" disabled>Register</button>
+
+                  {% if e['my_feedback_id'] %}
+                    <a class="btn  btn-outline-eco eco-action-btn"
+                       href="{{ url_for('volunteer_feedback', event_id=e['event_id']) }}">
+                      Feedback
+                    </a>
+                  {% endif %}
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  {% else %}
+    <div class="alert alert-warning">No events found for your filters.</div>
+  {% endif %}
+
+</div>
+
+{% endblock %}

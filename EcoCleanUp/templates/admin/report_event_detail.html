@@ -1,0 +1,218 @@
+{% extends "userbase.html" %}
+{% set active_page = 'event_reports' %}
+{% block title %}Event Report Detail{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-10">
+
+    <!-- Header: title + smart back (right aligned)-->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2 mb-3">
+      <div class="me-md-3">
+        <h1 class="h4 mb-0">Event Report Detail</h1>
+        <div class="text-muted small">
+          {{ event.event_name }} • {{ event.event_date }}
+        </div>
+      </div>
+
+      <div class="ms-md-auto d-flex flex-column flex-sm-row gap-2">
+        {% if request.args.get('src') == 'user' and request.args.get('user_id') %}
+          <a class="btn btn-outline-eco eco-action-btn"
+             href="{{ url_for('admin_user_history', user_id=request.args.get('user_id')) }}">
+            Back to user history
+          </a>
+        {% else %}
+          <a class="btn btn-outline-eco eco-action-btn" href="{{ url_for('admin_event_reports') }}">
+            Back to event reports
+          </a>
+        {% endif %}
+        <a class="btn btn-outline-eco eco-action-btn" href="{{ url_for('admin_home') }}">
+          Back to Dashboard
+        </a>
+      </div>
+    </div>
+
+    <!--  Event info (leader style)-->
+    <div class="eco-card card shadow-sm border-0 mb-3">
+      <div class="card-body">
+        <div><span class="fw-semibold">Date:</span> {{ event.event_date }}</div>
+        <div>
+          <span class="fw-semibold">Time:</span>
+          {{ event.start_time }}{% if event.end_time %} – {{ event.end_time }}{% endif %}
+        </div>
+        <div><span class="fw-semibold">Location:</span> {{ event.location }}</div>
+        <div><span class="fw-semibold">Leader:</span> {{ event.leader_name or "-" }}</div>
+      </div>
+    </div>
+
+    <!--Summary (attendance + engagement)-->
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-md-6">
+        <div class="eco-card card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <div class="fw-semibold mb-1">Attendance summary</div>
+            <div class="small text-muted">
+              Registered: <span class="text-dark fw-semibold">{{ att_sum.registered_count or 0 }}</span><br>
+              Attended: <span class="text-dark fw-semibold">{{ att_sum.attended_count or 0 }}</span><br>
+              Absent: <span class="text-dark fw-semibold">{{ att_sum.absent_count or 0 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <div class="eco-card card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <div class="fw-semibold mb-1">Volunteer engagement</div>
+            <div class="small text-muted">
+              Feedback: <span class="text-dark fw-semibold">{{ fb_sum.feedback_count or 0 }}</span><br>
+              Avg rating:
+              <span class="text-dark fw-semibold">
+                {{ fb_sum.avg_rating if fb_sum.avg_rating is not none else '-' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Volunteers & attendance (-->
+    <div class="eco-card card shadow-sm border-0 mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+          <div class="fw-semibold">Volunteers & Attendance</div>
+          <div class="text-muted small">{{ volunteers|length if volunteers else 0 }} records</div>
+        </div>
+
+        {% if volunteers and volunteers|length > 0 %}
+
+          <!-- Desktop: table -->
+          <div class="d-none d-lg-block">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="px-3">Name</th>
+                    <th class="px-3 text-nowrap" style="width:160px;">Contact</th>
+                    <th class="px-3 text-nowrap" style="width:140px;">Attendance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for v in volunteers %}
+                    <tr>
+                      <td class="px-3 fw-semibold">{{ v.full_name }}</td>
+                      <td class="px-3 text-nowrap">{{ v.contact_number or "-" }}</td>
+                      <td class="px-3 text-nowrap">
+                        {% if v.attendance == 'attended' %}
+                          <span class="badge bg-success">attended</span>
+                        {% elif v.attendance == 'absent' %}
+                          <span class="badge bg-danger">absent</span>
+                        {% else %}
+                          <span class="badge bg-secondary">{{ v.attendance }}</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Mobile: cards -->
+          <div class="d-block d-lg-none">
+            <div class="d-flex flex-column gap-3">
+              {% for v in volunteers %}
+                <div class="eco-card card shadow-sm border-0">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div class="fw-semibold">{{ v.full_name }}</div>
+                      {% if v.attendance == 'attended' %}
+                        <span class="badge bg-success">attended</span>
+                      {% elif v.attendance == 'absent' %}
+                        <span class="badge bg-danger">absent</span>
+                      {% else %}
+                        <span class="badge bg-secondary">{{ v.attendance }}</span>
+                      {% endif %}
+                    </div>
+                    <div class="text-muted small mt-2">
+                      <div><strong>Contact:</strong> {{ v.contact_number or "-" }}</div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+        {% else %}
+          <div class="text-muted">No registrations.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Feedback -->
+    <div class="eco-card card shadow-sm border-0">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+          <div class="fw-semibold">Feedback</div>
+          <div class="text-muted small">{{ feedback_rows|length if feedback_rows else 0 }} submissions</div>
+        </div>
+
+        {% if feedback_rows and feedback_rows|length > 0 %}
+
+          <!-- Desktop: table -->
+          <div class="d-none d-lg-block">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="px-3">Volunteer</th>
+                    <th class="px-3 text-nowrap" style="width:120px;">Rating</th>
+                    <th class="px-3">Comments</th>
+                    <th class="px-3 text-nowrap text-end" style="width:180px;">Submitted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for f in feedback_rows %}
+                    <tr>
+                      <td class="px-3 fw-semibold">{{ f.full_name }}</td>
+                      <td class="px-3 text-nowrap">{{ f.rating }}</td>
+                      <td class="px-3" style="max-width:520px;">{{ f.comments or "-" }}</td>
+                      <td class="px-3 text-end text-nowrap">
+                        {{ f.submitted_at if f.submitted_at is defined else '-' }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Mobile: cards -->
+          <div class="d-block d-lg-none">
+            <div class="d-flex flex-column gap-3">
+              {% for f in feedback_rows %}
+                <div class="eco-card card shadow-sm border-0">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div class="fw-semibold">{{ f.full_name }}</div>
+                      <span class="badge bg-light text-dark">Rating: {{ f.rating }}</span>
+                    </div>
+                    <div class="text-muted small mt-2">
+                      <div><strong>Comments:</strong> {{ f.comments or "-" }}</div>
+                      <div><strong>Submitted:</strong> {{ f.submitted_at if f.submitted_at is defined else '-' }}</div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+        {% else %}
+          <div class="text-muted">No feedback submitted.</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

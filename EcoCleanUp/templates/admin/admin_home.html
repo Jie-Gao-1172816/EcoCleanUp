@@ -1,0 +1,154 @@
+{% extends "userbase.html" %}
+{% set active_page = 'home' %}
+{% block title %}Admin Home{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-10">
+
+    <!-- Header: page title + subtitle -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+      <div>
+        <h1 class="h4 mb-0">Admin Dashboard</h1>
+        <div class="text-muted small">Platform overview</div>
+      </div>
+    </div>
+
+    <!-- Summary: platform statistics cards -->
+    <div class="row g-3">
+
+      <!-- Card: total events -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card shadow-sm border-0 eco-card h-100">
+          <div class="card-body">
+            <div class="text-muted small">Total events</div>
+            <div class="fs-3 fw-bold">{{ total_events }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card: total volunteers -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card shadow-sm border-0 eco-card h-100">
+          <div class="card-body">
+            <div class="text-muted small">Total volunteers</div>
+            <div class="fs-3 fw-bold">{{ total_volunteers }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card: total event leaders -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card shadow-sm border-0 eco-card h-100">
+          <div class="card-body">
+            <div class="text-muted small">Total event leaders</div>
+            <div class="fs-3 fw-bold">{{ total_event_leaders }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card: total admins -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card shadow-sm border-0 eco-card h-100">
+          <div class="card-body">
+            <div class="text-muted small">Total admins</div>
+            <div class="fs-3 fw-bold">{{ total_admins }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card: total feedback submissions -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card shadow-sm border-0 eco-card h-100">
+          <div class="card-body">
+            <div class="text-muted small">Total feedback submissions</div>
+            <div class="fs-3 fw-bold">{{ total_feedback }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card: average event rating -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card shadow-sm border-0 eco-card h-100">
+          <div class="card-body">
+            <div class="text-muted small">Average event rating</div>
+            <div class="fs-3 fw-bold">{{ avg_rating or "-" }}</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Actions: grouped quick access area -->
+    <div class="eco-card card shadow-sm border-0 mt-3">
+      <div class="card-body">
+
+        <!-- Group 1: primary admin actions -->
+        <div class="eco-card card shadow-sm border-0 mb-3">
+          <div class="card-body">
+            <div class="row g-2">
+
+              <!-- Button: manage users -->
+              <div class="col-12 col-md-4">
+                <a class="btn btn-eco btn-lg w-100 d-flex align-items-center justify-content-center text-center"
+                   style="height: 84px;"
+                   href="{{ url_for('admin_users') }}">
+                  Manage users
+                </a>
+              </div>
+
+              <!-- Button: manage events -->
+              <div class="col-12 col-md-4">
+                <a class="btn btn-eco btn-lg w-100 d-flex align-items-center justify-content-center text-center"
+                   style="height: 84px;"
+                   href="{{ url_for('admin_events') }}">
+                  Manage events
+                </a>
+              </div>
+
+              <!-- Button: participation history -->
+              <div class="col-12 col-md-4">
+                <a class="btn btn-eco btn-lg w-100 d-flex align-items-center justify-content-center text-center"
+                   style="height: 84px;"
+                   href="{{ url_for('admin_participation_history') }}">
+                  Participation history
+                </a>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Group 2: reports -->
+        <div class="eco-card card shadow-sm border-0">
+          <div class="card-body">
+            <div class="row g-2">
+
+              <!-- Button: platform report -->
+              <div class="col-12 col-md-6">
+                <a class="btn btn-outline-eco btn-lg w-100 d-flex align-items-center justify-content-center text-nowrap"
+                   style="min-height: 64px;"
+                   href="{{ url_for('admin_platform_report') }}">
+                  Platform report
+                </a>
+              </div>
+
+              <!-- Button: event reports -->
+              <div class="col-12 col-md-6">
+                <a class="btn btn-outline-eco btn-lg w-100 d-flex align-items-center justify-content-center text-nowrap"
+                   style="min-height: 64px;"
+                   href="{{ url_for('admin_event_reports') }}">
+                  Event reports
+                </a>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

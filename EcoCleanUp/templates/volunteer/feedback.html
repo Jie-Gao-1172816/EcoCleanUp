@@ -1,0 +1,196 @@
+{% extends "userbase.html" %}
+{% set active_page = 'home' %}
+{% block title %}Feedback{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-9 col-xl-8">
+
+    <!-- Header: title + single back button -->
+    <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+      <div>
+        <h1 class="h4 mb-1">Feedback</h1>
+        <div class="text-muted small">View or submit your feedback for this event.</div>
+      </div>
+
+      <!-- Back button -->
+      <a class="btn btn-outline-eco " href="{{ url_for('volunteer_history') }}">
+        Back to History
+      </a>
+    </div>
+
+    <!-- Event summary card -->
+    <div class="card shadow-sm border-0 eco-card mb-3">
+      <div class="card-body">
+        <div class="row g-3 align-items-start">
+          <div class="col-12 col-md-6">
+            <div class="text-muted small mb-1">Event</div>
+            <div class="h5 mb-0">{{ event_name }}</div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <div class="d-grid gap-2 small">
+              {% if event_date %}
+                <div class="d-flex justify-content-between gap-3">
+                  <div class="text-muted">Date</div>
+                  <div class="fw-semibold text-end text-nowrap">{{ event_date }}</div>
+                </div>
+              {% endif %}
+
+              {% if start_time and end_time %}
+                <div class="d-flex justify-content-between gap-3">
+                  <div class="text-muted">Time</div>
+                  <div class="fw-semibold text-end text-nowrap">{{ start_time }}–{{ end_time }}</div>
+                </div>
+              {% elif start_time %}
+                <div class="d-flex justify-content-between gap-3">
+                  <div class="text-muted">Time</div>
+                  <div class="fw-semibold text-end text-nowrap">{{ start_time }}</div>
+                </div>
+              {% endif %}
+
+              {% if location %}
+                <div class="d-flex justify-content-between gap-3">
+                  <div class="text-muted">Location</div>
+                  <div class="fw-semibold text-end">{{ location }}</div>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main content card -->
+    <div class="card shadow-sm border-0 eco-card">
+      <div class="card-body">
+
+        {% if existing_feedback %}
+
+          <!-- Read-only view -->
+          <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+            <div>
+              <div class="fw-semibold">Your submitted feedback</div>
+              <div class="text-muted small">Thanks for helping us improve future cleanups.</div>
+            </div>
+
+            <!-- Optional: submitted time (only if provided by backend) -->
+            {% if existing_feedback['created_at'] %}
+              <span class="badge bg-light text-dark border">
+                Submitted: {{ existing_feedback['created_at'] }}
+              </span>
+            {% endif %}
+          </div>
+
+          <!-- Rating block (auto styling by score) -->
+          {% set r = existing_feedback['rating'] %}
+
+          {% if r == 5 %}
+            {% set rating_badge = 'bg-success-subtle text-success border border-success-subtle' %}
+            {% set rating_icon = '⭐' %}
+          {% elif r == 4 %}
+            {% set rating_badge = 'bg-success-subtle text-success border border-success-subtle' %}
+            {% set rating_icon = '👍' %}
+          {% elif r == 3 %}
+            {% set rating_badge = 'bg-warning-subtle text-warning border border-warning-subtle' %}
+            {% set rating_icon = '🙂' %}
+          {% elif r == 2 %}
+            {% set rating_badge = 'bg-danger-subtle text-danger border border-danger-subtle' %}
+            {% set rating_icon = '⚠️' %}
+          {% else %}
+            {% set rating_badge = 'bg-danger-subtle text-danger border border-danger-subtle' %}
+            {% set rating_icon = '❗' %}
+          {% endif %}
+
+          <div class="p-3 p-md-4 rounded border bg-light mb-3">
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+              <div>
+                <div class="text-muted small mb-1">Rating</div>
+
+                <div class="d-flex align-items-center gap-3">
+                  <div class="display-6 mb-0 fw-bold" style="line-height: 1;">
+                    {{ r }}
+                  </div>
+
+                  <div>
+                    <div class="fw-semibold">
+                      <span class="badge rounded-pill {{ rating_badge }}">
+                        {{ rating_icon }}
+                        {% if r == 1 %}Very Poor{% endif %}
+                        {% if r == 2 %}Poor{% endif %}
+                        {% if r == 3 %}OK{% endif %}
+                        {% if r == 4 %}Good{% endif %}
+                        {% if r == 5 %}Excellent{% endif %}
+                      </span>
+                    </div>
+                    <div class="text-muted small mt-1">Scale: 1 (Very Poor) → 5 (Excellent)</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Small helper text -->
+              <div class="text-muted small">
+                Your rating helps leaders improve future events.
+              </div>
+            </div>
+          </div>
+
+          <!-- Comments block -->
+          <div class="mb-0">
+            <div class="text-muted small mb-1">Comments</div>
+
+            {% if existing_feedback['comments'] %}
+              <div class="border rounded p-3 bg-white">
+                {{ existing_feedback['comments'] }}
+              </div>
+            {% else %}
+              <div class="border rounded p-3 bg-white text-muted">
+                No comments provided.
+              </div>
+            {% endif %}
+          </div>
+
+        {% else %}
+
+          <!-- Submission form -->
+          <div class="mb-3">
+            <div class="fw-semibold">Submit feedback</div>
+            <div class="text-muted small">Please rate your experience. Comments are optional.</div>
+          </div>
+
+          <form method="POST" novalidate>
+
+            <div class="mb-3">
+              <label class="form-label" for="rating">Rating</label>
+              <select class="form-select" id="rating" name="rating" required>
+                <option value="" selected disabled>-- select rating --</option>
+                <option value="5">5 - Excellent</option>
+                <option value="4">4 - Good</option>
+                <option value="3">3 - OK</option>
+                <option value="2">2 - Poor</option>
+                <option value="1">1 - Very Poor</option>
+              </select>
+              <div class="form-text">Choose a number from 1 to 5.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="comments">Comments (optional)</label>
+              <textarea class="form-control" id="comments" name="comments" rows="4"
+                        placeholder="What went well? What could be improved?"></textarea>
+            </div>
+
+            <!-- Form actions -->
+            <div class="d-grid d-sm-flex gap-2 justify-content-sm-end">
+              <button class="btn btn-eco" type="submit">Submit</button>
+              <a class="btn btn-outline-eco" href="{{ url_for('volunteer_history') }}">Cancel</a>
+            </div>
+          </form>
+
+        {% endif %}
+
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

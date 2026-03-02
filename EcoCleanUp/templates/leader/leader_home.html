@@ -1,0 +1,184 @@
+{% extends "userbase.html" %}
+
+{% block content %}
+<div class="container mt-4">
+
+
+  <!-- Header / Quick actions-->
+  <div class="eco-card card shadow-sm mb-3">
+    <div class="card-body">
+
+      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+          <h2 class="mb-1">Leader Dashboard</h2>
+         
+        </div>
+
+        <!-- Primary actions -->
+        <div class="d-flex flex-column flex-sm-row flex-wrap gap-2">
+          <a class="btn btn-eco eco-action-btn" href="{{ url_for('leader_create_event') }}">
+            Create New Event
+          </a>
+          <a class="btn btn-outline-eco eco-action-btn" href="{{ url_for('leader_browse_events') }}">
+            Browse Events
+          </a>
+          <a class="btn btn-outline-eco eco-action-btn" href="{{ url_for('leader_manage_events') }}">
+            My Events
+          </a>
+          <a class="btn btn-outline-eco eco-action-btn" href="{{ url_for('leader_reports') }}">
+            Reports
+          </a>
+        </div>
+      </div>
+
+      <!-- Secondary actions -->
+      <div class="d-flex flex-column flex-sm-row flex-wrap gap-2 mt-3">
+        <a class="btn btn-outline-eco eco-action-btn" href="{{ url_for('leader_volunteer_history') }}">
+          Participation History
+        </a>
+        <a class="btn btn-outline-eco eco-action-btn" href="{{ url_for('leader_review_feedback') }}">
+          Review Feedback
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Upcoming Events-->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-4 mb-2">
+    <h4 class="mb-0">Upcoming Events</h4>
+    <span class="text-muted small">
+      Quick access to upcoming events you created.
+    </span>
+  </div>
+
+  {% if upcoming and upcoming|length > 0 %}
+
+    <!-- Desktop / large screens: table layout-->
+    <div class="d-none d-lg-block">
+      <div class="eco-card card shadow-sm">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-striped align-middle eco-table mb-0">
+              <thead>
+                <tr>
+                  <th style="min-width: 120px;">Date</th>
+                  <th style="min-width: 150px;">Time</th>
+                  <th style="min-width: 220px;">Event</th>
+                  <th style="min-width: 160px;">Location</th>
+                  <th style="min-width: 120px;">Type</th>
+                  <th class="text-end" style="min-width: 280px;">Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for e in upcoming %}
+                  <tr>
+                    <td>{{ e.event_date }}</td>
+                    <td class="text-nowrap">{{ e.start_time }} - {{ e.end_time }}</td>
+                    <td class="fw-semibold">{{ e.event_name }}</td>
+                    <td>{{ e.location }}</td>
+                    <td>{{ e.event_type or "-" }}</td>
+
+                    <td class="text-end">
+                      <!-- Action buttons: View / Edit / Cancel -->
+                      <div class="d-flex flex-wrap justify-content-end gap-2">
+
+                        <a class="btn  btn-outline-eco"
+                           href="{{ url_for('leader_event_detail', event_id=e.event_id) }}">
+                          Manage
+                        </a>
+
+                        <a class="btn  btn-outline-eco"
+                           href="{{ url_for('leader_edit_event', event_id=e.event_id) }}">
+                          Edit
+                        </a>
+
+                        <form method="post"
+                              action="{{ url_for('leader_cancel_event', event_id=e.event_id) }}"
+                              class="m-0"
+                              onsubmit="return confirm('Cancel (delete) this event?');">
+                          <button class="btn  btn-outline-danger" type="submit">
+                            Cancel
+                          </button>
+                        </form>
+
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile / tablet: card layout-->
+    <div class="d-block d-lg-none">
+      <div class="d-flex flex-column gap-3">
+        {% for e in upcoming %}
+          <div class="eco-card card shadow-sm">
+            <div class="card-body">
+
+              <div class="row g-3 align-items-start">
+
+                <!-- Left: event info -->
+                <div class="col-12 col-md-8">
+                  <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div class="fw-semibold">{{ e.event_name }}</div>
+                    <span class="badge bg-light text-dark">{{ e.event_type or "N/A" }}</span>
+                  </div>
+
+                  <div class="text-muted small mt-2">
+                    <div><strong>Date:</strong> {{ e.event_date }}</div>
+                    <div><strong>Time:</strong> {{ e.start_time }} - {{ e.end_time }}</div>
+                    <div><strong>Location:</strong> {{ e.location }}</div>
+                  </div>
+                </div>
+
+                <!-- Right: actions -->
+                <div class="col-12 col-md-4">
+                  <div class="d-flex flex-column gap-2 align-items-md-end">
+
+                    <a class="btn  btn-outline-eco" style="min-width:120px;"
+                       href="{{ url_for('leader_event_detail', event_id=e.event_id) }}">
+                      Manage
+                    </a>
+
+                    <a class="btn  btn-outline-eco" style="min-width:120px;"
+                       href="{{ url_for('leader_edit_event', event_id=e.event_id) }}">
+                      Edit
+                    </a>
+
+                    <form method="post"
+                          action="{{ url_for('leader_cancel_event', event_id=e.event_id) }}"
+                          class="m-0"
+                          onsubmit="return confirm('Cancel (delete) this event?');">
+                      <button class="btn  btn-outline-danger" style="min-width:120px;" type="submit">
+                        Cancel
+                      </button>
+                    </form>
+
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  {% else %}
+    <div class="eco-card card shadow-sm">
+      <div class="card-body">
+        <p class="text-muted mb-0">No upcoming events.</p>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

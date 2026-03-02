@@ -1,0 +1,231 @@
+{% extends "userbase.html" %}
+{% set active_page = 'home' %}
+{% block title %}Browse Events{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-10">
+
+    <!-- Page header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+      <div>
+        <h1 class="h4 mb-0">Browse Events</h1>
+        <div class="text-muted small">Browse all events and view details.</div>
+      </div>
+
+      <!-- Leader quick actions -->
+      <div class="d-flex flex-column flex-sm-row flex-wrap gap-2">
+        <a class="btn btn-eco eco-action-btn" href="{{ url_for('leader_create_event') }}">Create Event</a>
+        <a class="btn btn-outline-eco eco-action-btn" href="{{ url_for('leader_manage_events') }}">My Events</a>
+        <a class="btn btn-outline-eco eco-action-btn" href="{{ url_for('leader_home') }}">Back to Dashboard</a>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <form method="GET" class="card shadow-sm border-0 eco-card mb-3">
+      <div class="card-body">
+
+        <!-- Row 1: scope + date range -->
+        <div class="row g-2 align-items-end">
+          <div class="col-12 col-md-3">
+            <label class="form-label">Scope</label>
+            <select class="form-select" name="scope">
+              <option value="all" {% if scope=='all' %}selected{% endif %}>All events</option>
+              <option value="upcoming" {% if scope=='upcoming' %}selected{% endif %}>Upcoming</option>
+              <option value="past" {% if scope=='past' %}selected{% endif %}>Past</option>
+            </select>
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label">Date from</label>
+            <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label">Date to</label>
+            <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+          </div>
+
+          <div class="d-none d-md-block col-md-3"></div>
+        </div>
+
+        <!-- Row 2: type + location + leader -->
+        <div class="row g-2 align-items-end mt-1">
+          <div class="col-12 col-md-3">
+            <label class="form-label">Type</label>
+            <select class="form-select" name="event_type">
+              <option value="">-- All --</option>
+              {% for t in types %}
+                <option value="{{ t['event_type'] }}" {% if event_type == t['event_type'] %}selected{% endif %}>
+                  {{ t['event_type'] }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-12 col-md-5">
+            <label class="form-label">Location</label>
+            <select class="form-select" name="location">
+              <option value="">-- All --</option>
+              {% for loc in locations %}
+                <option value="{{ loc['location'] }}" {% if location == loc['location'] %}selected{% endif %}>
+                  {{ loc['location'] }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label">Leader</label>
+            <select class="form-select" name="leader_id">
+              <option value="">-- All --</option>
+              {% for l in leaders %}
+                <option value="{{ l['user_id'] }}" {% if leader_id == (l['user_id'] ~ '') %}selected{% endif %}>
+                  {{ l['leader_name'] }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 3: buttons -->
+        <div class="row g-2 mt-2">
+          <div class="col-12">
+            <div class="d-grid d-sm-flex gap-2">
+              <button class="btn btn-eco " type="submit" style="min-width: 110px;">Apply</button>
+              <a class="btn btn-outline-eco " href="{{ url_for('leader_browse_events') }}" style="min-width: 110px;">Clear</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </form>
+
+    {% if events and events|length > 0 %}
+
+      <!-- Desktop / large screens: table layout -->
+      <div class="d-none d-lg-block">
+        <div class="card shadow-sm border-0 eco-card">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="px-3 text-nowrap" style="width:130px;">Date</th>
+                    <th class="px-3">Event</th>
+                    <th class="px-3">Location</th>
+                    <th class="px-3 text-nowrap" style="width:140px;">Type</th>
+                    <th class="px-3 text-nowrap" style="width:180px;">Leader</th>
+                    <th class="px-3 text-nowrap" style="width:180px;">Time</th>
+                    <th class="px-3 text-end text-nowrap" style="width:160px;">Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {% for e in events %}
+                    <tr>
+                      <td class="px-3 text-nowrap">{{ e.event_date }}</td>
+                      <td class="px-3 fw-semibold">{{ e.event_name }}</td>
+                      <td class="px-3">{{ e.location }}</td>
+                      <td class="px-3 text-nowrap">{{ e.event_type or "-" }}</td>
+                      <td class="px-3 text-nowrap">{{ e.leader_name or "-" }}</td>
+                      <td class="px-3 text-nowrap">{{ e.start_time }} - {{ e.end_time }}</td>
+
+                      <td class="px-3 text-end">
+                        <div class="d-flex flex-column gap-2 align-items-end">
+                          <a class="btn  btn-outline-eco" style="min-width:120px;"
+                             href="{{ url_for('leader_event_detail', event_id=e.event_id) }}">
+                            Manage
+                          </a>
+
+                        
+                          {% if e.is_mine %}
+                            <a class="btn  btn-outline-eco" style="min-width:120px;"
+                               href="{{ url_for('leader_edit_event', event_id=e.event_id) }}">
+                              Edit
+                            </a>
+
+                            <form method="post"
+                                  action="{{ url_for('leader_cancel_event', event_id=e.event_id) }}"
+                                  class="m-0"
+                                  onsubmit="return confirm('Cancel (delete) this event?');">
+                              <button class="btn  btn-outline-danger" style="min-width:120px;" type="submit">
+                                Cancel
+                              </button>
+                            </form>
+                          {% endif %}
+                        </div>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile / tablet: card layout -->
+      <div class="d-block d-lg-none">
+        <div class="d-flex flex-column gap-3">
+          {% for e in events %}
+            <div class="card shadow-sm border-0 eco-card">
+              <div class="card-body">
+
+                <div class="row g-3 align-items-start">
+                  <!-- Left: event info -->
+                  <div class="col-12 col-md-8">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div class="fw-semibold">{{ e.event_name }}</div>
+                      <span class="badge bg-light text-dark">{{ e.event_type or "N/A" }}</span>
+                    </div>
+
+                    <div class="text-muted small mt-2">
+                      <div><strong>Date:</strong> {{ e.event_date }}</div>
+                      <div><strong>Time:</strong> {{ e.start_time }} - {{ e.end_time }}</div>
+                      <div><strong>Location:</strong> {{ e.location }}</div>
+                      <div><strong>Leader:</strong> {{ e.leader_name or "-" }}</div>
+                    </div>
+                  </div>
+
+                  <!-- Right: actions -->
+                  <div class="col-12 col-md-4">
+                    <div class="d-flex flex-column gap-2 align-items-md-end">
+                      <a class="btn  btn-outline-eco" style="min-width:120px;"
+                         href="{{ url_for('leader_event_detail', event_id=e.event_id) }}">
+                        Manage
+                      </a>
+
+                      {% if e.is_mine %}
+                        <a class="btn  btn-outline-eco" style="min-width:120px;"
+                           href="{{ url_for('leader_edit_event', event_id=e.event_id) }}">
+                          Edit
+                        </a>
+
+                        <form method="post"
+                              action="{{ url_for('leader_cancel_event', event_id=e.event_id) }}"
+                              class="m-0"
+                              onsubmit="return confirm('Cancel (delete) this event?');">
+                          <button class="btn  btn-outline-danger" style="min-width:120px;" type="submit">
+                            Cancel
+                          </button>
+                        </form>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    {% else %}
+      <div class="alert alert-warning">No events found for your filters.</div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

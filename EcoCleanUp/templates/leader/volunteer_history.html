@@ -1,0 +1,95 @@
+{% extends "userbase.html" %}
+{% set active_page = 'participation_history' %}
+
+{% block content %}
+<div class="container mt-4">
+
+ 
+
+  <!--Header + unified entry-->
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+      <h2 class="mb-1">Volunteer Participation History</h2>
+      <p class="text-muted mb-0">Search volunteers and view participation summary.</p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-outline-eco" href="{{ url_for('leader_home') }}">
+        Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Search (mobile-friendly)-->
+  <form method="get" class="row g-2 align-items-center">
+    <div class="col-12 col-md-7">
+      <label class="visually-hidden" for="keyword">Search</label>
+      <input
+        id="keyword"
+        class="form-control"
+        name="keyword"
+        value="{{ keyword or '' }}"
+        placeholder="Search by volunteer name"
+        autocomplete="off"
+        aria-label="Search by volunteer name"
+      >
+    </div>
+
+    <div class="col-6 col-md-2">
+      <button class="btn btn-eco w-100" type="submit" >
+        Search
+      </button>
+    </div>
+
+    <div class="col-6 col-md-3">
+      <a class="btn btn-outline-eco" href="{{ url_for('leader_volunteer_history') }}">
+        Reset
+      </a>
+    </div>
+  </form>
+
+  <!-- Results-->
+  {% if rows %}
+    <div class="eco-card card shadow-sm mt-3">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-striped align-middle eco-table mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="text-nowrap">Name</th>
+                <th class="text-nowrap">Contact</th>
+                <th class="text-nowrap">Total Joined</th>
+                <th class="text-nowrap">Total Attended</th>
+                <th class="text-nowrap text-end">Detail</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for r in rows %}
+              <tr>
+                <td class="fw-semibold text-nowrap">{{ r.full_name }}</td>
+                <td class="text-nowrap">{{ r.contact_number or "-" }}</td>
+                <td class="text-nowrap">{{ r.total_joined }}</td>
+                <td class="text-nowrap">{{ r.total_attended }}</td>
+                <td class="text-end">
+                  <a class="btn  btn-outline-eco"
+                     href="{{ url_for('leader_volunteer_history_detail', volunteer_id=r.volunteer_id) }}">
+                    View
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+
+          </table>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-secondary mt-3 mb-0" role="alert">
+      No records found.
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

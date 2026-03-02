@@ -30,8 +30,7 @@ UserAccount = namedtuple('UserAccount', ['username', 'password'])
 app = Flask(__name__)
 flask_bcrypt = Bcrypt(app)
 
-# Replace the example UserAccount objects below with the initial user accounts
-# for your own web app. You can add as many as you need to the list.
+
 users = [
     # Admins (2)
     UserAccount('amelia.admin', 'AdminA!2026'),

@@ -1,0 +1,98 @@
+{% extends "userbase.html" %}
+{% set active_page = 'participation_history' %}
+
+{% block content %}
+<div class="container mt-4">
+
+
+
+  <!-- Header + unified entry -->
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+      <h2 class="mb-1">Volunteer Detail History</h2>
+      <p class="text-muted mb-0">
+        <strong>{{ volunteer.full_name or volunteer.username }}</strong>
+        {% if volunteer.contact_number %} | {{ volunteer.contact_number }}{% endif %}
+      </p>
+    </div>
+
+    <div class="d-flex  gap-2 justify-content-end ms-auto">
+      
+      <a class="btn btn-outline-eco" href="{{ url_for('leader_volunteer_history') }}">
+        Back to Participation History
+      </a>
+      <a class="btn btn-outline-eco" href="{{ url_for('leader_home') }}">
+        Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Results-->
+  {% if history and history|length > 0 %}
+
+    <!-- Desktop / large screens: table layout-->
+    <div class="d-none d-lg-block">
+      <div class="eco-card card shadow-sm">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-striped align-middle eco-table mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="text-nowrap">Date</th>
+                  <th>Event</th>
+                  <th>Location</th>
+                  <th class="text-nowrap">Time</th>
+                  <th class="text-nowrap">Attendance</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for h in history %}
+                <tr>
+                  <td class="text-nowrap">{{ h.event_date }}</td>
+                  <td class="fw-semibold">{{ h.event_name }}</td>
+                  <td>{{ h.location }}</td>
+                  <td class="text-nowrap">{{ h.start_time }} - {{ h.end_time }}</td>
+                  <td class="text-nowrap">{{ h.attendance or 'registered' }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile / tablet: card layout-->
+    <div class="d-block d-lg-none">
+      <div class="d-flex flex-column gap-3">
+        {% for h in history %}
+          <div class="eco-card card shadow-sm">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <div class="fw-semibold">{{ h.event_name }}</div>
+                <span class="badge bg-light text-dark">{{ h.attendance or 'registered' }}</span>
+              </div>
+
+              <div class="text-muted small mt-2">
+                <div><strong>Date:</strong> {{ h.event_date }}</div>
+                <div><strong>Time:</strong> {{ h.start_time }} - {{ h.end_time }}</div>
+                <div><strong>Location:</strong> {{ h.location }}</div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  {% else %}
+    <div class="eco-card card shadow-sm">
+      <div class="card-body">
+        <p class="text-muted mb-0">No participation records.</p>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

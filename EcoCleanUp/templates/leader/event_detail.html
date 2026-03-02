@@ -1,0 +1,562 @@
+{% extends "userbase.html" %}
+{% set active_page = 'home' %}
+{% block title %}Event Detail{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-10">
+
+    <!-- Page header / unified entry actions-->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+      <div>
+        <h1 class="h4 mb-0">Event Detail</h1>
+        <div class="text-muted small">{{ event.event_name }}</div>
+      </div>
+
+      <div class="d-flex flex-column flex-sm-row flex-wrap gap-2">
+        <a class="btn btn-outline-eco eco-action-btn" href="{{ url_for('leader_manage_events') }}">My Events</a>
+        <a class="btn btn-outline-eco eco-action-btn" href="{{ url_for('leader_browse_events') }}">Browse Events</a>
+        <a class="btn btn-outline-eco eco-action-btn" href="{{ url_for('leader_home') }}">Back to Dashboard</a>
+      </div>
+    </div>
+
+    <!-- Overview card-->
+    <div class="card shadow-sm border-0 eco-card mb-3">
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-md-6">
+            <div class="text-muted small">Date</div>
+            <div class="fw-semibold">{{ event.event_date }}</div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <div class="text-muted small">Time</div>
+            <div class="fw-semibold">{{ event.start_time }} - {{ event.end_time }}</div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <div class="text-muted small">Location</div>
+            <div class="fw-semibold">{{ event.location }}</div>
+          </div>
+
+          <div class="col-12 col-md-3">
+            <div class="text-muted small">Type</div>
+            <div class="fw-semibold">{{ event.event_type or "-" }}</div>
+          </div>
+
+          <div class="col-12 col-md-3">
+            <div class="text-muted small">Leader</div>
+            <div class="fw-semibold">{{ event.leader_name or "-" }}</div>
+          </div>
+
+          {% if event.description %}
+            <div class="col-12">
+              <div class="text-muted small">Description</div>
+              <div>{{ event.description }}</div>
+            </div>
+          {% endif %}
+
+          {% if event.supplies %}
+            <div class="col-12 col-md-6">
+              <div class="text-muted small">Supplies</div>
+              <div>{{ event.supplies }}</div>
+            </div>
+          {% endif %}
+
+          {% if event.safety_instructions %}
+            <div class="col-12 col-md-6">
+              <div class="text-muted small">Safety Instructions</div>
+              <div>{{ event.safety_instructions }}</div>
+            </div>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+
+    
+    <!-- reminder-->
+    {% if is_mine and (event.status == 'upcoming' or (event.status is none and event.event_date)) %}
+      <div class="card shadow-sm border-0 eco-card mb-3">
+        <div class="card-body">
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <div>
+              <div class="fw-semibold">Send reminder to registered volunteers</div>
+              <div class="text-muted small">Volunteers will see a notification popup on their next login.</div>
+            </div>
+          </div>
+
+          <form method="post" action="{{ url_for('leader_send_reminder', event_id=event.event_id) }}" class="mt-3">
+            <label class="form-label small text-muted mb-1">Optional message</label>
+            <textarea class="form-control" name="message" rows="2"
+                      placeholder="e.g., Please arrive 10 minutes early and bring gloves."></textarea>
+
+            <div class="mt-2 d-flex flex-column flex-sm-row gap-2">
+              <button class="btn btn-eco eco-action-btn" type="submit"
+                      onclick="return confirm('Send reminder to volunteers registered for this event?');">
+                Send reminder
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+
+    <!--Tabs (mobile-friendly) -->
+    <ul class="nav nav-tabs flex-wrap mb-3" role="tablist">
+
+      <li class="nav-item" role="presentation">
+        <button
+          class="nav-link btn-outline-eco {{ 'active' if (active_tab or 'tab-volunteers') == 'tab-volunteers' else '' }}"
+          id="tab-volunteers-btn"
+          data-bs-toggle="tab"
+          data-bs-target="#tab-volunteers"
+          type="button"
+          role="tab"
+          aria-controls="tab-volunteers"
+          aria-selected="{{ 'true' if (active_tab or 'tab-volunteers') == 'tab-volunteers' else 'false' }}">
+          Registered Volunteers
+        </button>
+      </li>
+
+      <li class="nav-item" role="presentation">
+        <button
+          class="nav-link btn-outline-eco {{ 'active' if (active_tab or '') == 'tab-attendance' else '' }}"
+          id="tab-attendance-btn"
+          data-bs-toggle="tab"
+          data-bs-target="#tab-attendance"
+          type="button"
+          role="tab"
+          aria-controls="tab-attendance"
+          aria-selected="{{ 'true' if (active_tab or '') == 'tab-attendance' else 'false' }}">
+          Attendance
+        </button>
+      </li>
+
+      <li class="nav-item" role="presentation">
+        <button
+          class="nav-link btn-outline-eco {{ 'active' if (active_tab or '') == 'tab-outcomes' else '' }}"
+          id="tab-outcomes-btn"
+          data-bs-toggle="tab"
+          data-bs-target="#tab-outcomes"
+          type="button"
+          role="tab"
+          aria-controls="tab-outcomes"
+          aria-selected="{{ 'true' if (active_tab or '') == 'tab-outcomes' else 'false' }}">
+          Outcomes
+        </button>
+      </li>
+
+      <li class="nav-item" role="presentation">
+        <button
+          class="nav-link btn-outline-eco {{ 'active' if (active_tab or '') == 'tab-feedback' else '' }}"
+          id="tab-feedback-btn"
+          data-bs-toggle="tab"
+          data-bs-target="#tab-feedback"
+          type="button"
+          role="tab"
+          aria-controls="tab-feedback"
+          aria-selected="{{ 'true' if (active_tab or '') == 'tab-feedback' else 'false' }}">
+          Feedback
+        </button>
+      </li>
+
+      <li class="nav-item" role="presentation">
+        <button
+          class="nav-link btn-outline-eco {{ 'active' if (active_tab or '') == 'tab-history' else '' }}"
+          id="tab-history-btn"
+          data-bs-toggle="tab"
+          data-bs-target="#tab-history"
+          type="button"
+          role="tab"
+          aria-controls="tab-history"
+          aria-selected="{{ 'true' if (active_tab or '') == 'tab-history' else 'false' }}">
+          Participation History
+        </button>
+      </li>
+
+    </ul>
+
+    <div class="tab-content">
+
+      <!-- Tab A: Registered Volunteers-->
+      <div class="tab-pane fade {{ 'show active' if (active_tab or 'tab-volunteers') == 'tab-volunteers' else '' }}"
+           id="tab-volunteers" role="tabpanel" aria-labelledby="tab-volunteers-btn">
+
+        <div class="card shadow-sm border-0 eco-card">
+          <div class="card-body">
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="fw-semibold">Volunteer List</div>
+              <div class="text-muted small">Total: <strong>{{ volunteers|length }}</strong></div>
+            </div>
+
+            {% if volunteers and volunteers|length > 0 %}
+
+              <!-- Desktop table -->
+              <div class="d-none d-lg-block">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0 eco-table">
+                    <thead class="table-light">
+                      <tr>
+                        <th class="px-3">Volunteer</th>
+                        <th class="px-3">Email</th>
+                        <th class="px-3 text-nowrap" style="width:160px;">Status</th>
+                        <th class="px-3 text-end text-nowrap" style="width:160px;">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for v in volunteers %}
+                        <tr>
+                          <td class="px-3 fw-semibold">{{ v.volunteer_name }}</td>
+                          <td class="px-3">{{ v.email or "-" }}</td>
+                          <td class="px-3">{{ v.attendance or "registered" }}</td>
+                          <td class="px-3 text-end">
+                            {% if is_mine %}
+                              <form method="post"
+                                    action="{{ url_for('leader_remove_volunteer', event_id=event.event_id, volunteer_id=v.volunteer_id) }}"
+                                    class="m-0"
+                                    onsubmit="return confirm('Remove this volunteer from the event?');">
+                                <button class="btn btn-outline-danger" type="submit">Remove</button>
+                              </form>
+                            {% else %}
+                              <span class="text-muted small">-</span>
+                            {% endif %}
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Mobile cards -->
+              <div class="d-block d-lg-none">
+                <div class="d-flex flex-column gap-3">
+                  {% for v in volunteers %}
+                    <div class="card shadow-sm border-0 eco-card">
+                      <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                          <div class="fw-semibold">{{ v.volunteer_name }}</div>
+                          <span class="badge bg-light text-dark">{{ v.attendance or "registered" }}</span>
+                        </div>
+                        <div class="text-muted small mt-2">
+                          <div><strong>Email:</strong> {{ v.email or "-" }}</div>
+                        </div>
+
+                        {% if is_mine %}
+                          <div class="mt-3 d-flex justify-content-end">
+                            <form method="post"
+                                  action="{{ url_for('leader_remove_volunteer', event_id=event.event_id, volunteer_id=v.volunteer_id) }}"
+                                  class="m-0"
+                                  onsubmit="return confirm('Remove this volunteer from the event?');">
+                              <button class="btn btn-outline-danger" type="submit">Remove</button>
+                            </form>
+                          </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+
+            {% else %}
+              <div class="text-muted">No volunteers registered for this event.</div>
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab B: Attendance-->
+      <div class="tab-pane fade {{ 'show active' if (active_tab or '') == 'tab-attendance' else '' }}"
+           id="tab-attendance" role="tabpanel" aria-labelledby="tab-attendance-btn">
+
+        <div class="card shadow-sm border-0 eco-card">
+          <div class="card-body">
+
+            {% if not is_mine %}
+              <div class="alert alert-warning mb-0">You can view attendance, but only the event owner can edit it.</div>
+            {% endif %}
+
+            {% if attendance and attendance|length > 0 %}
+
+              <!-- Desktop table -->
+              <div class="d-none d-lg-block mt-2">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0 eco-table">
+                    <thead class="table-light">
+                      <tr>
+                        <th class="px-3">Volunteer</th>
+                        <th class="px-3 text-nowrap" style="width:160px;">Current</th>
+                        <th class="px-3 text-end text-nowrap" style="width:260px;">Update</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for a in attendance %}
+                        <tr>
+                          <td class="px-3 fw-semibold">{{ a.volunteer_name }}</td>
+                          <td class="px-3">{{ a.attendance or 'registered' }}</td>
+                          <td class="px-3 text-end">
+                            {% if is_mine %}
+                              <form method="post"
+                                    action="{{ url_for('leader_update_attendance', event_id=event.event_id) }}"
+                                    class="m-0 d-inline-flex gap-2 align-items-center">
+                                <input type="hidden" name="volunteer_id" value="{{ a.volunteer_id }}">
+                                <select class="form-select form-select-sm" name="attendance" style="max-width: 160px;">
+                                  <option value="registered" {{ 'selected' if (a.attendance or 'registered') == 'registered' else '' }}>registered</option>
+                                  <option value="attended"   {{ 'selected' if a.attendance == 'attended' else '' }}>attended</option>
+                                  <option value="absent"     {{ 'selected' if a.attendance == 'absent' else '' }}>absent</option>
+                                  
+                                <button class="btn btn-eco" type="submit">Save</button>
+                              </form>
+                            {% else %}
+                              <span class="text-muted small">-</span>
+                            {% endif %}
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Mobile cards -->
+              <div class="d-block d-lg-none mt-2">
+                <div class="d-flex flex-column gap-3">
+                  {% for a in attendance %}
+                    <div class="card shadow-sm border-0 eco-card">
+                      <div class="card-body">
+                        <div class="fw-semibold">{{ a.volunteer_name }}</div>
+                        <div class="text-muted small mt-2">
+                          <div><strong>Current:</strong> {{ a.attendance or 'registered' }}</div>
+                        </div>
+
+                        {% if is_mine %}
+                          <form method="post"
+                                action="{{ url_for('leader_update_attendance', event_id=event.event_id) }}"
+                                class="mt-3">
+                            <input type="hidden" name="volunteer_id" value="{{ a.volunteer_id }}">
+                            <div class="d-flex gap-2">
+                              <select class="form-select form-select-sm" name="attendance">
+                                <option value="registered" {{ 'selected' if (a.attendance or 'registered') == 'registered' else '' }}>registered</option>
+                                <option value="attended"   {{ 'selected' if a.attendance == 'attended' else '' }}>attended</option>
+                                <option value="absent"     {{ 'selected' if a.attendance == 'absent' else '' }}>absent</option>
+                            
+                              </select>
+                              <button class="btn btn-eco" type="submit">Save</button>
+                            </div>
+                          </form>
+                        {% endif %}
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+
+            {% else %}
+              <div class="text-muted">No attendance records yet.</div>
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab C: Outcomes-->
+      <div class="tab-pane fade {{ 'show active' if (active_tab or '') == 'tab-outcomes' else '' }}"
+           id="tab-outcomes" role="tabpanel" aria-labelledby="tab-outcomes-btn">
+
+        <div class="card shadow-sm border-0 eco-card">
+          <div class="card-body">
+
+            {% if not is_mine %}
+              <div class="alert alert-warning">You can view outcomes, but only the event owner can record or update them.</div>
+            {% endif %}
+
+            {% if outcomes %}
+              <div class="row g-3 mb-3">
+                <div class="col-12 col-md-3">
+                  <div class="text-muted small">Attendees</div>
+                  <div class="fw-semibold">{{ outcomes.num_attendees }}</div>
+                </div>
+                <div class="col-12 col-md-3">
+                  <div class="text-muted small">Bags Collected</div>
+                  <div class="fw-semibold">{{ outcomes.bags_collected }}</div>
+                </div>
+                <div class="col-12 col-md-3">
+                  <div class="text-muted small">Recyclables Sorted</div>
+                  <div class="fw-semibold">{{ outcomes.recyclables_sorted }}</div>
+                </div>
+                <div class="col-12 col-md-3">
+                  <div class="text-muted small">Recorded At</div>
+                  <div class="fw-semibold">{{ outcomes.recorded_at }}</div>
+                </div>
+
+                <div class="col-12">
+                  <div class="text-muted small">Other Achievements</div>
+                  <div>{{ outcomes.other_achievements or "-" }}</div>
+                </div>
+              </div>
+            {% else %}
+              <div class="text-muted mb-3">No outcomes recorded for this event yet.</div>
+            {% endif %}
+
+            <form method="post" action="{{ url_for('leader_record_outcomes', event_id=event.event_id) }}">
+              <div class="row g-3">
+                <div class="col-12 col-md-3">
+                  <label class="form-label">Number of Attendees</label>
+                  <input type="number" class="form-control" name="num_attendees" min="0"
+                         value="{{ outcomes.num_attendees if outcomes else '' }}"
+                         {% if not is_mine %}disabled{% endif %}>
+                </div>
+
+                <div class="col-12 col-md-3">
+                  <label class="form-label">Bags Collected</label>
+                  <input type="number" class="form-control" name="bags_collected" min="0"
+                         value="{{ outcomes.bags_collected if outcomes else '' }}"
+                         {% if not is_mine %}disabled{% endif %}>
+                </div>
+
+                <div class="col-12 col-md-3">
+                  <label class="form-label">Recyclables Sorted</label>
+                  <input type="number" class="form-control" name="recyclables_sorted" min="0"
+                         value="{{ outcomes.recyclables_sorted if outcomes else '' }}"
+                         {% if not is_mine %}disabled{% endif %}>
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label">Other Achievements</label>
+                  <textarea class="form-control" name="other_achievements" rows="3"
+                            {% if not is_mine %}disabled{% endif %}>{{ outcomes.other_achievements if outcomes else '' }}</textarea>
+                </div>
+              </div>
+
+              {% if is_mine %}
+                <div class="mt-3 d-flex flex-column flex-sm-row gap-2">
+                  <button class="btn btn-eco eco-action-btn" type="submit">
+                    {% if outcomes %}Update Outcomes{% else %}Record Outcomes{% endif %}
+                  </button>
+                </div>
+              {% endif %}
+            </form>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab D: Feedback (read-only)-->
+      <div class="tab-pane fade {{ 'show active' if (active_tab or '') == 'tab-feedback' else '' }}"
+           id="tab-feedback" role="tabpanel" aria-labelledby="tab-feedback-btn">
+
+        <div class="card shadow-sm border-0 eco-card">
+          <div class="card-body">
+
+            {% if feedback_list and feedback_list|length > 0 %}
+
+              <div class="d-none d-lg-block">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0 eco-table">
+                    <thead class="table-light">
+                      <tr>
+                        <th class="px-3 text-nowrap" style="width:120px;">Rating</th>
+                        <th class="px-3">Comment</th>
+                        <th class="px-3 text-nowrap" style="width:220px;">Volunteer</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for f in feedback_list %}
+                        <tr>
+                          <td class="px-3">{{ f.rating }}</td>
+                          <td class="px-3">{{ f.comments or "-" }}</td>
+                          <td class="px-3">{{ f.volunteer_name }}</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="d-block d-lg-none">
+                <div class="d-flex flex-column gap-3">
+                  {% for f in feedback_list %}
+                    <div class="card shadow-sm border-0 eco-card">
+                      <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                          <div class="fw-semibold">Rating: {{ f.rating }}</div>
+                          <span class="badge bg-light text-dark">{{ f.volunteer_name }}</span>
+                        </div>
+                        <div class="text-muted small mt-2">
+                          <div><strong>Comment:</strong> {{ f.comments or "-" }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+
+            {% else %}
+              <div class="text-muted">No feedback submitted for this event.</div>
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab E: Participation History (event summary)-->
+      <div class="tab-pane fade {{ 'show active' if (active_tab or '') == 'tab-history' else '' }}"
+           id="tab-history" role="tabpanel" aria-labelledby="tab-history-btn">
+
+        <div class="card shadow-sm border-0 eco-card">
+          <div class="card-body">
+
+            {% if history_summary %}
+              <div class="row g-3">
+                <div class="col-12 col-md-3">
+                  <div class="text-muted small">Total Registrations</div>
+                  <div class="fw-semibold">{{ history_summary.total_registrations }}</div>
+                </div>
+                <div class="col-12 col-md-3">
+                  <div class="text-muted small">Attended</div>
+                  <div class="fw-semibold">{{ history_summary.attended }}</div>
+                </div>
+                <div class="col-12 col-md-3">
+                  <div class="text-muted small">Absent</div>
+                  <div class="fw-semibold">{{ history_summary.absent }}</div>
+                </div>
+                <div class="col-12 col-md-3">
+                  <div class="text-muted small">Avg Rating</div>
+                  <div class="fw-semibold">{{ history_summary.avg_rating or "-" }}</div>
+                </div>
+              </div>
+            {% else %}
+              <div class="text-muted">No history summary available.</div>
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom actions -->
+    {% if is_mine %}
+      <div class="card shadow-sm border-0 eco-card mt-3">
+        <div class="card-body">
+          <div class="d-flex flex-column flex-sm-row flex-wrap gap-2">
+            <a class="btn btn-eco eco-action-btn" href="{{ url_for('leader_edit_event', event_id=event.event_id) }}">Edit</a>
+
+            <form method="post"
+                  action="{{ url_for('leader_cancel_event', event_id=event.event_id) }}"
+                  class="m-0"
+                  onsubmit="return confirm('Cancel (delete) this event?');">
+              <button class="btn btn-outline-danger eco-action-btn" type="submit">Cancel</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

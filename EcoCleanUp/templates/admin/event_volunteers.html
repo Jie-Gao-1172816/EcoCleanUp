@@ -1,0 +1,125 @@
+{% extends "userbase.html" %}
+{% set active_page = 'home' %}
+{% block title %}Event Volunteers{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-10">
+
+    <!-- Page header: title + navigation -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+      <div>
+        <h1 class="h4 mb-0">Registered Volunteers</h1>
+        <div class="text-muted small">View volunteers registered for this event.</div>
+      </div>
+
+      <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-eco " href="{{ url_for('admin_events') }}">Back to events</a>
+        <a class="btn btn-outline-eco " href="{{ url_for('admin_home') }}">Dashboard</a>
+      </div>
+    </div>
+
+    <!-- Event summary -->
+    <div class="card shadow-sm border-0 eco-card mb-3">
+      <div class="card-body">
+        <div class="fw-semibold">{{ event.event_name }}</div>
+        <div class="text-muted small mt-1">
+          {{ event.event_date }} · {{ event.start_time }}–{{ event.end_time }} · {{ event.location }}
+          <br>
+          Leader: {{ event.leader_name or "-" }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Volunteers list -->
+    <div class="card shadow-sm border-0 eco-card">
+      <div class="card-body p-0">
+
+        {% if volunteers and volunteers|length > 0 %}
+
+          <!-- Desktop / large screens: table layout -->
+          <div class="d-none d-lg-block">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="px-3">Volunteer</th>
+                    <th class="px-3 text-nowrap" style="width:160px;">Contact</th>
+                    <th class="px-3 text-nowrap" style="width:120px;">Status</th>
+                    <th class="px-3 text-nowrap" style="width:140px;">Attendance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for v in volunteers %}
+                    <tr>
+                      <td class="px-3 fw-semibold">{{ v.full_name }}</td>
+                      <td class="px-3 text-nowrap">{{ v.contact_number or "-" }}</td>
+                      <td class="px-3 text-nowrap">
+                        {% if v.status == 'active' %}
+                          <span class="badge bg-success">active</span>
+                        {% else %}
+                          <span class="badge bg-secondary">{{ v.status }}</span>
+                        {% endif %}
+                      </td>
+                      <td class="px-3 text-nowrap">
+                        {% if v.attendance == 'attended' %}
+                          <span class="badge bg-success">attended</span>
+                        {% elif v.attendance == 'absent' %}
+                          <span class="badge bg-danger">absent</span>
+                        {% else %}
+                          <span class="badge bg-secondary">{{ v.attendance }}</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Mobile / tablet: card layout -->
+          <div class="d-block d-lg-none p-3">
+            <div class="d-flex flex-column gap-3">
+              {% for v in volunteers %}
+                <div class="card shadow-sm border-0 eco-card">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div class="fw-semibold">{{ v.full_name }}</div>
+                      {% if v.attendance == 'attended' %}
+                        <span class="badge bg-success">attended</span>
+                      {% elif v.attendance == 'absent' %}
+                        <span class="badge bg-danger">absent</span>
+                      {% else %}
+                        <span class="badge bg-secondary">{{ v.attendance }}</span>
+                      {% endif %}
+                    </div>
+
+                    <div class="text-muted small mt-2">
+                      <div><strong>Contact:</strong> {{ v.contact_number or "-" }}</div>
+                      <div>
+                        <strong>User status:</strong>
+                        {% if v.status == 'active' %}
+                          <span class="badge bg-success">active</span>
+                        {% else %}
+                          <span class="badge bg-secondary">{{ v.status }}</span>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+        {% else %}
+          <div class="p-4 text-center text-muted">
+            No volunteers registered for this event.
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "userbase.html" %}
+{% set active_page = 'review_feedback' %}
+
+{% block content %}
+<div class="container mt-4">
+
+
+  <!-- Header + unified entry-->
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+      <h2 class="mb-1">Feedback Review</h2>
+      <p class="text-muted mb-0">Review feedback submitted by volunteers for your events.</p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-outline-eco" href="{{ url_for('leader_home') }}">
+        Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Results-->
+  {% if rows and rows|length > 0 %}
+
+    <!-- Desktop / large screens: table layout-->
+    <div class="d-none d-lg-block">
+      <div class="eco-card card shadow-sm">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-striped align-middle eco-table mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="text-nowrap">Event</th>
+                  <th class="text-nowrap">Date</th>
+                  <th class="text-nowrap">Volunteer</th>
+                  <th class="text-nowrap">Rating</th>
+                  <th>Comments</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for r in rows %}
+                <tr>
+                  <td class="fw-semibold">{{ r.event_name }}</td>
+                  <td class="text-nowrap">{{ r.event_date }}</td>
+                  <td class="text-nowrap">{{ r.full_name }}</td>
+                  <td class="text-nowrap">{{ r.rating }}</td>
+                  <td style="max-width:420px;" class="text-wrap">
+                    {{ r.comments or "-" }}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile / tablet: card layout-->
+    <div class="d-block d-lg-none">
+      <div class="d-flex flex-column gap-3">
+        {% for r in rows %}
+          <div class="eco-card card shadow-sm">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <div class="fw-semibold">{{ r.event_name }}</div>
+                <span class="badge bg-light text-dark">Rating: {{ r.rating }}</span>
+              </div>
+
+              <div class="text-muted small mt-2">
+                <div><strong>Date:</strong> {{ r.event_date }}</div>
+                <div><strong>Volunteer:</strong> {{ r.full_name }}</div>
+              </div>
+
+              <div class="mt-2">
+                <div class="text-muted small">Comments</div>
+                <div class="small text-wrap">
+                  {{ r.comments or "-" }}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  {% else %}
+    <div class="eco-card card shadow-sm">
+      <div class="card-body">
+        <p class="text-muted mb-0">No feedback yet.</p>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

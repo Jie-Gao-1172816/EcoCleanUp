@@ -1,0 +1,129 @@
+{% extends "userbase.html" %}
+{% set active_page = 'participation_history' %}
+
+{% block content %}
+<div class="container mt-4">
+
+  <!-- Header: title + right-aligned back buttons -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2 mb-3">
+    <div>
+      <h2 class="mb-1">Participation History</h2>
+      <p class="text-muted mb-0">Search volunteers and view participation summary (admin view).</p>
+    </div>
+
+    <!-- Right: back buttons -->
+    <div class="d-flex flex-column flex-sm-row gap-2 justify-content-md-end ms-md-auto">
+      <a class="btn btn-outline-eco" style="min-width: 200px;" href="{{ url_for('admin_users') }}">
+        Back to Users
+      </a>
+      <a class="btn btn-outline-eco" style="min-width: 200px;" href="{{ url_for('admin_home') }}">
+        Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+<form method="get" class="row g-2 align-items-stretch">
+
+  <!-- Left: search input -->
+  <div class="col-12 col-md-8">
+    <label class="visually-hidden" for="keyword">Search</label>
+    <input
+      id="keyword"
+      class="form-control h-100"
+      name="keyword"
+      value="{{ keyword or '' }}"
+      placeholder="Search by volunteer name / username"
+      autocomplete="off"
+      aria-label="Search by volunteer name / username"
+    >
+  </div>
+
+  <!-- Right: buttons (equal width) -->
+  <div class="col-12 col-md-4">
+    <div class="d-grid gap-2" style="grid-template-columns: 1fr 1fr; height: 100%;">
+      <button class="btn btn-eco" type="submit" style="height: 44px;">
+        Search
+      </button>
+      <a class="btn btn-outline-eco" href="{{ url_for('admin_participation_history') }}" style="height: 44px;">
+        Reset
+      </a>
+    </div>
+  </div>
+
+</form>
+
+  <!-- Results -->
+  {% if rows and rows|length > 0 %}
+
+    <!-- Desktop / large screens: table -->
+    <div class="d-none d-lg-block">
+      <div class="eco-card card shadow-sm mt-3">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-striped align-middle eco-table mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="text-nowrap">Name</th>
+                  <th class="text-nowrap">Contact</th>
+                  <th class="text-nowrap">Total Joined</th>
+                  <th class="text-nowrap">Total Attended</th>
+                  <th class="text-nowrap text-end">Detail</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for r in rows %}
+                <tr>
+                  <td class="fw-semibold text-nowrap">{{ r.full_name }}</td>
+                  <td class="text-nowrap">{{ r.contact_number or "-" }}</td>
+                  <td class="text-nowrap">{{ r.total_joined }}</td>
+                  <td class="text-nowrap">{{ r.total_attended }}</td>
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-outline-eco" style="min-width: 88px;"
+                       href="{{ url_for('admin_user_history', user_id=r.volunteer_id) }}">
+                      View
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile / tablet: cards -->
+    <div class="d-block d-lg-none">
+      <div class="d-flex flex-column gap-3 mt-3">
+        {% for r in rows %}
+          <div class="eco-card card shadow-sm">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <div class="fw-semibold">{{ r.full_name }}</div>
+                <a class="btn btn-sm btn-outline-eco"
+                   href="{{ url_for('admin_user_history', user_id=r.volunteer_id) }}">
+                  View
+                </a>
+              </div>
+
+              <div class="text-muted small mt-2">
+                <div><strong>Contact:</strong> {{ r.contact_number or "-" }}</div>
+                <div><strong>Total Joined:</strong> {{ r.total_joined }}</div>
+                <div><strong>Total Attended:</strong> {{ r.total_attended }}</div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  {% else %}
+    <div class="alert alert-secondary mt-3 mb-0" role="alert">
+      No records found.
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

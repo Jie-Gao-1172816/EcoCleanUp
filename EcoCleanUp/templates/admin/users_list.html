@@ -1,0 +1,207 @@
+{% extends "userbase.html" %}
+{% set active_page = 'home' %}
+{% block title %}Manage Users{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-10">
+
+    <!-- Page header: title + back to admin dashboard -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+      <div>
+        <h1 class="h4 mb-0">Users</h1>
+      </div>
+      <a class="btn btn-outline-eco " href="{{ url_for('admin_home') }}">Back to Dashboard</a>
+    </div>
+
+    <!-- Filters (2-row layout to avoid truncation on all screens) -->
+<form method="get" class="card shadow-sm border-0 eco-card mb-3">
+  <div class="card-body">
+
+    {% set keyword_q = request.args.get('keyword', '') %}
+    {% set role_q = request.args.get('role', '') %}
+    {% set status_q = request.args.get('status', '') %}
+
+    <!-- Row 1: Search + Role -->
+    <div class="row g-2 align-items-end">
+      <div class="col-12 col-md-8">
+        <label class="form-label">Search</label>
+        <input class="form-control"
+               name="keyword"
+               value="{{ keyword_q }}"
+               placeholder="Search by full name / username">
+      </div>
+
+      <div class="col-12 col-md-4">
+        <label class="form-label">Role</label>
+        <select class="form-select" name="role">
+          <option value="" {% if role_q == '' %}selected{% endif %}>All roles</option>
+          <option value="volunteer" {% if role_q == 'volunteer' %}selected{% endif %}>volunteer</option>
+          <option value="event_leader" {% if role_q == 'event_leader' %}selected{% endif %}>event_leader</option>
+          <option value="admin" {% if role_q == 'admin' %}selected{% endif %}>admin</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Row 2: Status + Buttons -->
+    <div class="row g-2 align-items-end mt-1">
+      <div class="col-12 col-md-6">
+        <label class="form-label">Status</label>
+        <select class="form-select" name="status">
+          <option value="" {% if status_q == '' %}selected{% endif %}>All status</option>
+          <option value="active" {% if status_q == 'active' %}selected{% endif %}>active</option>
+          <option value="inactive" {% if status_q == 'inactive' %}selected{% endif %}>inactive</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <div class="d-grid d-sm-flex gap-2 justify-content-sm-end">
+          <button class="btn btn-eco " style="min-width:92px;" type="submit">Apply</button>
+          <a class="btn btn-outline-eco " style="min-width:92px;" href="{{ url_for('admin_users') }}">Clear</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</form>
+
+<!-- Quick access: Participation History -->
+<div class="eco-card card shadow-sm mb-3">
+  <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+    <div>
+      <div class="fw-semibold">Participation History</div>
+      <div class="text-muted small">View participation summary and details for all volunteers.</div>
+    </div>
+    <a class="btn btn-outline-eco" href="{{ url_for('admin_participation_history') }}">
+      Participation History
+    </a>
+  </div>
+</div>
+
+    {% if users and users|length > 0 %}
+
+      <!-- Desktop / large screens: table layout  -->
+      <div class="d-none d-lg-block">
+        <div class="card shadow-sm border-0 eco-card">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="px-3">Username</th>
+                    <th class="px-3">Full name</th>
+                    <th class="px-3 text-nowrap" style="width:140px;">Role</th>
+                    <th class="px-3 text-nowrap" style="width:120px;">Status</th>
+                    <th class="px-3 text-nowrap" style="width:150px;">Contact</th>
+                    <th class="px-3 text-end text-nowrap" style="width:360px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for u in users %}
+                    <tr>
+                      <td class="px-3">{{ u.username }}</td>
+                      <td class="px-3">{{ u.full_name or "-" }}</td>
+                      <td class="px-3 text-nowrap">{{ u.role }}</td>
+
+                      <!-- Smaller status badge -->
+                      <td class="px-3 text-nowrap">
+                        {% if u.status == 'active' %}
+                          <span class="badge rounded-pill bg-success small">active</span>
+                        {% else %}
+                          <span class="badge rounded-pill bg-secondary small">{{ u.status }}</span>
+                        {% endif %}
+                      </td>
+
+                      <td class="px-3 text-nowrap">{{ u.contact_number or "-" }}</td>
+
+                      <td class="px-3 text-end">
+                        <div class="d-inline-flex flex-column gap-2 align-items-end">
+
+                          <!-- Update status -->
+                          <form method="post"
+                                action="{{ url_for('admin_change_user_status', user_id=u.user_id) }}"
+                                class="d-flex gap-2 align-items-center m-0">
+                            <select class="form-select form-select-sm" name="status" style="min-width:140px;">
+                              <option value="active" {% if u.status=='active' %}selected{% endif %}>active</option>
+                              <option value="inactive" {% if u.status=='inactive' %}selected{% endif %}>inactive</option>
+                            </select>
+                            <button class="btn  btn-outline-eco btn-sm" type="submit">Update</button>
+                          </form>
+
+                          <!-- View participation history (volunteers only) -->
+                          {% if u.role == 'volunteer' %}
+                            <a class="btn  btn-outline-eco"
+                               href="{{ url_for('admin_user_history', user_id=u.user_id) }}">
+                              View history
+                            </a>
+                          {% endif %}
+
+                        </div>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile / tablet: card layout -->
+      <div class="d-block d-lg-none">
+        <div class="d-flex flex-column gap-3">
+          {% for u in users %}
+            <div class="card shadow-sm border-0 eco-card">
+              <div class="card-body">
+
+                <!-- Card header: name + small status badge -->
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <div class="fw-semibold">{{ u.full_name or u.username }}</div>
+
+                  {% if u.status == 'active' %}
+                    <span class="badge rounded-pill bg-success small">active</span>
+                  {% else %}
+                    <span class="badge rounded-pill bg-secondary small">{{ u.status }}</span>
+                  {% endif %}
+                </div>
+
+                <!-- Card info ->
+                <div class="text-muted small mt-2">
+                  <div><strong>Username:</strong> {{ u.username }}</div>
+                  <div><strong>Role:</strong> {{ u.role }}</div>
+                  <div><strong>Contact:</strong> {{ u.contact_number or "-" }}</div>
+                </div>
+
+                <!-- Actions: compact status select + update + small history button -->
+                <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
+                  <form method="post"
+                        action="{{ url_for('admin_change_user_status', user_id=u.user_id) }}"
+                        class="d-flex gap-2 align-items-center m-0 flex-grow-1">
+                    <select class="form-select form-select-sm" name="status" style="max-width: 160px;">
+                      <option value="active" {% if u.status=='active' %}selected{% endif %}>active</option>
+                      <option value="inactive" {% if u.status=='inactive' %}selected{% endif %}>inactive</option>
+                    </select>
+                    <button class="btn  btn-outline-eco btn-sm" type="submit">Update</button>
+                  </form>
+
+                  {% if u.role == 'volunteer' %}
+                    <a class="btn  btn-outline-eco"
+                       href="{{ url_for('admin_user_history', user_id=u.user_id) }}">
+                      View history
+                    </a>
+                  {% endif %}
+                </div>
+
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    {% else %}
+      <div class="alert alert-warning">No users found for your filters.</div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

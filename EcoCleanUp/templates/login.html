@@ -1,8 +1,10 @@
 {% extends "base_public.html" %}
+{% set active_page = 'login' %}
 
 {% block title %}EcoCleanUp | Log in{% endblock %}
 
 {% block content %}
+{# Login page: single login form for all roles. Errors are shown inline. #}
 <div class="row justify-content-center">
   <div class="col-12 col-sm-10 col-md-7 col-lg-5">
 
@@ -15,9 +17,23 @@
       <div class="card-body p-4">
         <h1 class="h5 mb-3">Log in</h1>
 
+        {# High-level alerts (account status / missing fields / optional generic error) #}
+        {% if missing_fields %}
+          <div class="alert alert-warning">
+            Please enter both your username and password.
+          </div>
+        {% endif %}
+
         {% if account_inactive %}
           <div class="alert alert-warning">
             Your account is currently inactive. Please contact an administrator.
+          </div>
+        {% endif %}
+
+        {# If you ever pass a generic login_error from backend #}
+        {% if login_error %}
+          <div class="alert alert-danger">
+            {{ login_error }}
           </div>
         {% endif %}
 
@@ -31,7 +47,7 @@
                    value="{{ username|default('') }}"
                    placeholder="Enter your username..."
                    required>
-            <div class="invalid-feedback">Can't find your account</div>
+            <div class="invalid-feedback">Can't find your account.</div>
           </div>
 
           <div class="mb-3">
@@ -41,7 +57,7 @@
                    id="password" name="password"
                    placeholder="Enter your password..."
                    required>
-            <div class="invalid-feedback">Incorrect username or password</div>
+            <div class="invalid-feedback">Incorrect username or password.</div>
           </div>
 
           <button type="submit" class="btn btn-eco w-100">Log In</button>
@@ -49,16 +65,16 @@
       </div>
 
       <div class="card-footer text-center py-3 bg-white">
-        <span class="text-muted">Don't have an account?</span>
-        <a class="link-eco ms-1" href="{{ url_for('signup') }}">Sign up</a>
+        <span class="text-muted">New to EcoCleanUp?</span>
+        <a class="link-eco ms-1" href="{{ url_for('signup') }}">Create a volunteer account</a>
       </div>
     </div>
 
+    {# Theme-consistent tagline  #}
     <div class="text-center small text-muted mt-3">
-      Sustainability-focused · Mobile-friendly · Built with Bootstrap
+      Cleaner places · Stronger communities · Measurable impact
     </div>
 
   </div>
 </div>
 {% endblock %}
-
