@@ -10,36 +10,46 @@ This repository is a **private** GitHub repository named **EcoCleanUp** and incl
 
 ## 1) What this app does (simple overview)
 
-### Volunteer
+## What this app can do (by role)
 
-- Register a volunteer account (self-registration is Volunteer only).
-- Log in and see the volunteer dashboard.
-- Browse events and filter by date / location / type.
+### Volunteer
+- Register a new account (**Volunteer only**). Users cannot self-register as Event Leader or Admin.
+- Registration collects: username (unique), email, password (min 8 chars + mixed types), optional profile image, full name, home address, contact number, environmental interests.
+- Login and logout using the shared login system (same login page for all roles).
+- View and edit my profile (name, address, contact number, interests, profile image).
+- Change my password (new password validated; cannot reuse current password).
+- Browse upcoming cleanup events and filter by **date / location / type**.
 - Register for an event.
-- Get a warning if I try to register for another event at the same time.
-- View upcoming events and past participation history.
-- Submit feedback for past events (rating 1–5 + comment).
+  - If I am already registered for another event at the same time, the system shows a warning and declines registration.
+- See reminders on login for upcoming registered events (popup notification).
+- View my participation history (past events + attendance status).
+- Submit feedback after an event (rating **1–5** + comment).
 - View my submitted feedback for past events.
 
 ### Event Leader
-
-- Log in and access the leader dashboard.
-- Create events.
-- Manage events I created (edit/cancel).
-- View registered volunteers for my events.
-- Remove volunteers if needed.
-- Mark attendance.
-- Record event outcomes (attendees, rubbish bags, recyclables, other achievements).
-- View feedback for my events.
+- Login and logout using the shared login system.
+- View and edit my profile; change my password (same rules as above).
+- Browse upcoming cleanup events and filter by **date / location / type**.
+- Create new cleanup events with required details (event name, location, date, time, duration, supplies, safety instructions).
+- Manage events I created (view, edit, cancel).
+- View the list of registered volunteers for my events.
+- Remove volunteers from my events when needed.
+- Track volunteer attendance during each event.
+- Record event outcomes (number of attendees, rubbish bags collected, recyclables sorted, other achievements if used).
+- Review volunteer feedback for my events.
+- View reports for events I manage.
 
 ### Admin
+- Login and logout using the shared login system.
+- View and edit my profile; change my password (same rules as above).
+- Browse upcoming cleanup events and filter by **date / location / type**.
+- Manage events across the platform (view all events, edit, cancel).
+- View registered volunteer lists for events.
+- View all users with role and status; search/filter by full name, role, status.
+- Change user status (active/inactive).
+- View platform-wide reports (total events, total volunteers, total event leaders, total feedback submissions, average event rating).
+- View event reports summarising attendance and volunteer engagement (admin sees all events; leaders see their own).
 
-- Log in and access admin dashboard.
-- View all users and filter by role/status.
-- Change user status active/inactive.
-- View reports and event summaries.
-
----
 
 ## 2) Repository requirements (what is included)
 
