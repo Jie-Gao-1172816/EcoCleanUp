@@ -522,6 +522,8 @@ def admin_event_reports():
     Admin Event Reports (filtered):
     - Attendance summary (registered / attended / absent)
     - Volunteer engagement (feedback count + avg rating)
+    - Volunteer engagement ALSO includes outcomes:
+        bags_collected / recyclables_sorted / other_achievements
     Filters:
       date_from, date_to, leader_id, location, event_type
     """
@@ -589,7 +591,14 @@ def admin_event_reports():
             COALESCE(reg.absent_count, 0) AS absent_count,
 
             COALESCE(fb.feedback_count, 0) AS feedback_count,
-            fb.avg_rating AS avg_rating
+            fb.avg_rating AS avg_rating,
+
+            -- outcomes (merged into engagement)
+            (o.outcome_id IS NOT NULL) AS outcome_recorded,
+            o.bags_collected,
+            o.recyclables_sorted,
+            o.other_achievements,
+            o.recorded_at
 
         FROM events e
         LEFT JOIN users u ON u.user_id = e.event_leader_id
@@ -613,6 +622,9 @@ def admin_event_reports():
             FROM feedback
             GROUP BY event_id
         ) fb ON fb.event_id = e.event_id
+
+        LEFT JOIN eventoutcomes o
+               ON o.event_id = e.event_id
 
         WHERE COALESCE(e.status,'upcoming') <> 'cancelled'
     """
@@ -675,6 +687,8 @@ def admin_event_report_detail(event_id):
     - Event info
     - Attendance summary
     - Volunteer engagement summary (feedback count + avg rating)
+    - Volunteer engagement ALSO includes outcomes:
+        bags_collected / recyclables_sorted / other_achievements
     - Volunteer list + attendance
     - Feedback list
     """
@@ -726,6 +740,22 @@ def admin_event_report_detail(event_id):
         fb_sum = cursor.fetchone()
 
         # ---------------------------------------------------------
+        # Outcomes (bags / recyclables / other achievements)
+        # ---------------------------------------------------------
+        cursor.execute("""
+            SELECT
+                o.bags_collected,
+                o.recyclables_sorted,
+                o.other_achievements,
+                o.recorded_at,
+                COALESCE(u.full_name, u.username) AS recorded_by_name
+            FROM eventoutcomes o
+            LEFT JOIN users u ON u.user_id = o.recorded_by
+            WHERE o.event_id = %s;
+        """, (event_id,))
+        outcome = cursor.fetchone()
+
+        # ---------------------------------------------------------
         # Volunteers + attendance list (exclude cancelled)
         # ---------------------------------------------------------
         cursor.execute("""
@@ -771,5 +801,6 @@ def admin_event_report_detail(event_id):
         feedback_rows=feedback_rows,
         att_sum=att_sum,
         fb_sum=fb_sum,
-        active_page='event_reports')
-
+        outcome=outcome,  
+        active_page='event_reports'
+    )

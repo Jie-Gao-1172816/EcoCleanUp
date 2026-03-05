@@ -64,6 +64,8 @@
         <div class="eco-card card shadow-sm border-0 h-100">
           <div class="card-body">
             <div class="fw-semibold mb-1">Volunteer engagement</div>
+
+            <!-- Feedback summary -->
             <div class="small text-muted">
               Feedback: <span class="text-dark fw-semibold">{{ fb_sum.feedback_count or 0 }}</span><br>
               Avg rating:
@@ -71,6 +73,33 @@
                 {{ fb_sum.avg_rating if fb_sum.avg_rating is not none else '-' }}
               </span>
             </div>
+
+            <hr class="my-2">
+
+            <!-- Outcomes -->
+            {% if outcome %}
+              <div class="small text-muted">
+                Bags collected:
+                <span class="text-dark fw-semibold">{{ outcome.bags_collected if outcome.bags_collected is not none else 0 }}</span><br>
+                Recyclables sorted:
+                <span class="text-dark fw-semibold">{{ outcome.recyclables_sorted if outcome.recyclables_sorted is not none else 0 }}</span><br>
+                Other achievements:
+                <span class="text-dark fw-semibold">{{ outcome.other_achievements if outcome.other_achievements else '-' }}</span>
+              </div>
+
+              <div class="small text-muted mt-2">
+                Recorded by:
+                <span class="text-dark fw-semibold">{{ outcome.recorded_by_name if outcome.recorded_by_name else '-' }}</span><br>
+                
+              </div>
+            {% else %}
+              <div class="small text-muted">
+                Bags collected: <span class="text-dark fw-semibold">-</span><br>
+                Recyclables sorted: <span class="text-dark fw-semibold">-</span><br>
+                Other achievements: <span class="text-dark fw-semibold">Not recorded</span>
+              </div>
+            {% endif %}
+
           </div>
         </div>
       </div>

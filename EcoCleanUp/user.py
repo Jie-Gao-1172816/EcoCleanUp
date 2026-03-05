@@ -273,6 +273,7 @@ def signup():
                     profile_image_filename,
                     DEFAULT_USER_ROLE, 'active'
                 ))
+                db.connection.commit()
         except Exception:
             # Defensive: unexpected failure (e.g. race on unique constraint)
             username_error = "Could not create account. Please try a different username."

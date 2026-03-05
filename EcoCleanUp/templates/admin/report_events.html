@@ -16,7 +16,7 @@
       <!-- Right: consistent entry buttons -->
       <div class="d-flex flex-column flex-sm-row gap-2 justify-content-md-end ms-md-auto">
         <a class="btn btn-outline-eco" style="min-width: 180px;" href="{{ url_for('admin_platform_report') }}">
-          Platform report
+          Platform Report
         </a>
         <a class="btn btn-outline-eco" style="min-width: 180px;" href="{{ url_for('admin_home') }}">
           Back to Dashboard
@@ -25,75 +25,75 @@
     </div>
 
     <!--Filters  -->
-<div class="eco-card card shadow-sm border-0 mb-3">
-  <div class="card-body">
-    <form method="get" class="row g-2 align-items-end">
+    <div class="eco-card card shadow-sm border-0 mb-3">
+      <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
 
-      <!-- Date From -->
-      <div class="col-12 col-md-4 col-xl-3">
-        <label class="form-label small text-muted mb-1">From</label>
-        <input type="date" class="form-control" name="date_from"
-               value="{{ filters.date_from if filters else '' }}">
+          <!-- Date From -->
+          <div class="col-12 col-md-4 col-xl-3">
+            <label class="form-label small text-muted mb-1">From</label>
+            <input type="date" class="form-control" name="date_from"
+                   value="{{ filters.date_from if filters else '' }}">
+          </div>
+
+          <!-- Date To -->
+          <div class="col-12 col-md-4 col-xl-3">
+            <label class="form-label small text-muted mb-1">To</label>
+            <input type="date" class="form-control" name="date_to"
+                   value="{{ filters.date_to if filters else '' }}">
+          </div>
+
+          <!-- Leader -->
+          <div class="col-12 col-md-4 col-xl-2">
+            <label class="form-label small text-muted mb-1">Leader</label>
+            <select class="form-select" name="leader_id">
+              <option value="">All leaders</option>
+              {% for l in leader_options %}
+                <option value="{{ l.user_id }}"
+                  {% if filters and filters.leader_id and (filters.leader_id|string) == (l.user_id|string) %}selected{% endif %}>
+                  {{ l.display_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Location -->
+          <div class="col-12 col-md-6 col-xl-2">
+            <label class="form-label small text-muted mb-1">Location</label>
+            <select class="form-select" name="location">
+              <option value="">All locations</option>
+              {% for loc in location_options %}
+                <option value="{{ loc }}"
+                  {% if filters and filters.location == loc %}selected{% endif %}>
+                  {{ loc }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Event Type -->
+          <div class="col-12 col-md-6 col-xl-2">
+            <label class="form-label small text-muted mb-1">Type</label>
+            <select class="form-select" name="event_type">
+              <option value="">All types</option>
+              {% for t in type_options %}
+                <option value="{{ t }}"
+                  {% if filters and filters.event_type == t %}selected{% endif %}>
+                  {{ t }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Actions -->
+          <div class="col-12 d-flex gap-2">
+            <button class="btn btn-eco justify-content-end" style="min-width: 100px;" type="submit">Apply</button>
+            <a class="btn btn-outline-eco justify-content-end" style="min-width: 100px;" href="{{ url_for('admin_event_reports') }}">Reset</a>
+          </div>
+
+        </form>
       </div>
-
-      <!-- Date To -->
-      <div class="col-12 col-md-4 col-xl-3">
-        <label class="form-label small text-muted mb-1">To</label>
-        <input type="date" class="form-control" name="date_to"
-               value="{{ filters.date_to if filters else '' }}">
-      </div>
-
-      <!-- Leader -->
-      <div class="col-12 col-md-4 col-xl-2">
-        <label class="form-label small text-muted mb-1">Leader</label>
-        <select class="form-select" name="leader_id">
-          <option value="">All leaders</option>
-          {% for l in leader_options %}
-            <option value="{{ l.user_id }}"
-              {% if filters and filters.leader_id and (filters.leader_id|string) == (l.user_id|string) %}selected{% endif %}>
-              {{ l.display_name }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <!-- Location -->
-      <div class="col-12 col-md-6 col-xl-2">
-        <label class="form-label small text-muted mb-1">Location</label>
-        <select class="form-select" name="location">
-          <option value="">All locations</option>
-          {% for loc in location_options %}
-            <option value="{{ loc }}"
-              {% if filters and filters.location == loc %}selected{% endif %}>
-              {{ loc }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <!-- Event Type -->
-      <div class="col-12 col-md-6 col-xl-2">
-        <label class="form-label small text-muted mb-1">Type</label>
-        <select class="form-select" name="event_type">
-          <option value="">All types</option>
-          {% for t in type_options %}
-            <option value="{{ t }}"
-              {% if filters and filters.event_type == t %}selected{% endif %}>
-              {{ t }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <!-- Actions -->
-      <div class="col-12 d-flex gap-2">
-        <button class="btn btn-eco justify-content-end" style="min-width: 100px;" type="submit">Apply</button>
-        <a class="btn btn-outline-eco justify-content-end" style="min-width: 100px;" href="{{ url_for('admin_event_reports') }}">Reset</a>
-      </div>
-
-    </form>
-  </div>
-</div>
+    </div>
 
     {% if rows and rows|length > 0 %}
 
@@ -111,8 +111,11 @@
                     <th class="px-3 text-nowrap" style="width:110px;">Registered</th>
                     <th class="px-3 text-nowrap" style="width:110px;">Attended</th>
                     <th class="px-3 text-nowrap" style="width:110px;">Absent</th>
+
+                    <!-- Volunteer engagement (kept as your original columns) -->
                     <th class="px-3 text-nowrap" style="width:110px;">Feedback</th>
-                    <th class="px-3 text-nowrap  sticky-col-2" style="width:120px;">Avg Rating</th>
+                    <th class="px-3 text-nowrap sticky-col-2" style="width:120px;">Avg Rating</th>
+
                     <th class="px-3 text-end text-nowrap sticky-col-1" style="width:140px;">Detail</th>
                   </tr>
                 </thead>
@@ -126,8 +129,12 @@
                       <td class="px-3 text-nowrap">{{ r.registered_count or 0 }}</td>
                       <td class="px-3 text-nowrap">{{ r.attended_count or 0 }}</td>
                       <td class="px-3 text-nowrap">{{ r.absent_count or 0 }}</td>
+
                       <td class="px-3 text-nowrap">{{ r.feedback_count or 0 }}</td>
-                      <td class="px-3 text-nowrap sticky-col-2">{{ r.avg_rating or "-" }}</td>
+                      <td class="px-3 text-nowrap sticky-col-2">
+                        {{ r.avg_rating if r.avg_rating is not none else "-" }}
+                      </td>
+
                       <td class="px-3 text-end sticky-col-1">
                         <a class="btn btn-sm btn-outline-eco"
                            style="min-width: 110px;"
@@ -136,6 +143,47 @@
                         </a>
                       </td>
                     </tr>
+
+                    {# Extra row (desktop only) to show outcomes under "Volunteer engagement" without breaking table layout #}
+                    <tr class="table-light">
+                      <td class="px-3" colspan="9">
+                        <div class="d-flex flex-wrap gap-3 small text-muted">
+                          <div>
+                            <span class="fw-semibold text-dark">Volunteer engagement:</span>
+                            Feedback <span class="text-dark fw-semibold">{{ r.feedback_count or 0 }}</span>,
+                            Avg <span class="text-dark fw-semibold">{{ r.avg_rating if r.avg_rating is not none else "-" }}</span>
+                          </div>
+
+                          <div class="vr d-none d-md-block"></div>
+
+                          {% if r.outcome_recorded %}
+                            <div>
+                              Bags collected:
+                              <span class="text-dark fw-semibold">{{ r.bags_collected if r.bags_collected is not none else 0 }}</span>
+                            </div>
+                            <div>
+                              Recyclables sorted:
+                              <span class="text-dark fw-semibold">{{ r.recyclables_sorted if r.recyclables_sorted is not none else 0 }}</span>
+                            </div>
+                            <div>
+                              Other achievements:
+                              <span class="text-dark fw-semibold">{{ r.other_achievements if r.other_achievements else "-" }}</span>
+                            </div>
+                          {% else %}
+                            <div>
+                              Bags collected: <span class="text-dark fw-semibold">-</span>
+                            </div>
+                            <div>
+                              Recyclables sorted: <span class="text-dark fw-semibold">-</span>
+                            </div>
+                            <div>
+                              Other achievements: <span class="text-dark fw-semibold">Not recorded</span>
+                            </div>
+                          {% endif %}
+                        </div>
+                      </td>
+                    </tr>
+
                   {% endfor %}
                 </tbody>
 
@@ -165,8 +213,22 @@
                   <div><strong>Registered:</strong> {{ r.registered_count or 0 }}</div>
                   <div><strong>Attended:</strong> {{ r.attended_count or 0 }}</div>
                   <div><strong>Absent:</strong> {{ r.absent_count or 0 }}</div>
+
+                  <div class="mt-2 fw-semibold text-dark">Volunteer engagement</div>
                   <div><strong>Feedback:</strong> {{ r.feedback_count or 0 }}</div>
-                  <div><strong>Avg rating:</strong> {{ r.avg_rating or "-" }}</div>
+                  <div><strong>Avg rating:</strong> {{ r.avg_rating if r.avg_rating is not none else "-" }}</div>
+
+                  <hr class="my-2">
+
+                  {% if r.outcome_recorded %}
+                    <div><strong>Bags collected:</strong> {{ r.bags_collected if r.bags_collected is not none else 0 }}</div>
+                    <div><strong>Recyclables sorted:</strong> {{ r.recyclables_sorted if r.recyclables_sorted is not none else 0 }}</div>
+                    <div><strong>Other achievements:</strong> {{ r.other_achievements if r.other_achievements else "-" }}</div>
+                  {% else %}
+                    <div><strong>Bags collected:</strong> -</div>
+                    <div><strong>Recyclables sorted:</strong> -</div>
+                    <div><strong>Other achievements:</strong> Not recorded</div>
+                  {% endif %}
                 </div>
 
                 <!-- Card footer: view details -->

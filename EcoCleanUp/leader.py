@@ -960,12 +960,6 @@ def leader_review_feedback():
 # ============================================================
 @app.route('/leader/reports')
 def leader_reports():
-    """
-    Leader Reports (summary list):
-    - Attendance summary
-    - Volunteer engagement summary (feedback count + avg rating)
-    Only for events created by current leader.
-    """
     guard = require_leader_login()
     if guard:
         return guard
@@ -989,7 +983,14 @@ def leader_reports():
             COALESCE(reg.absent_count, 0) AS absent_count,
 
             COALESCE(fb.feedback_count, 0) AS feedback_count,
-            fb.avg_rating AS avg_rating
+            fb.avg_rating AS avg_rating,
+
+            -- Outcomes 
+            (o.outcome_id IS NOT NULL) AS outcome_recorded,
+            o.bags_collected,
+            o.recyclables_sorted,
+            o.other_achievements,
+            o.recorded_at
 
         FROM events e
 
@@ -1012,6 +1013,9 @@ def leader_reports():
             FROM feedback
             GROUP BY event_id
         ) fb ON fb.event_id = e.event_id
+
+        LEFT JOIN eventoutcomes o
+               ON o.event_id = e.event_id
 
         WHERE e.event_leader_id = %s
           AND COALESCE(e.status,'upcoming') <> 'cancelled'
@@ -1037,6 +1041,9 @@ def leader_reports():
         filters={'date_from': date_from, 'date_to': date_to},
         active_page='reports'
     )
+    
+    
+    
 # ============================================================
 # Leader: Event Report Detail
 # ============================================================
@@ -1118,6 +1125,22 @@ def leader_event_report_detail(event_id: int):
             WHERE event_id=%s;
         """, (event_id,))
         fb_sum = cursor.fetchone()
+        # ---------------------------------------------------------
+        # Outcomes (bags/recyclables/other achievements)
+        # ---------------------------------------------------------
+        cursor.execute("""
+            SELECT
+                o.num_attendees,
+                o.bags_collected,
+                o.recyclables_sorted,
+                o.other_achievements,
+                o.recorded_at,
+                COALESCE(u.full_name, u.username) AS recorded_by_name
+            FROM eventoutcomes o
+            LEFT JOIN users u ON u.user_id = o.recorded_by
+            WHERE o.event_id = %s;
+        """, (event_id,))
+        outcome = cursor.fetchone()
 
     return render_template(
         'leader/report_event_detail.html',
@@ -1126,5 +1149,7 @@ def leader_event_report_detail(event_id: int):
         feedback_rows=feedback_rows,
         att_sum=att_sum,
         fb_sum=fb_sum,
+        outcome=outcome,
         active_page='reports'
+        
     )
