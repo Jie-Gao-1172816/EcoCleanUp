@@ -61,9 +61,8 @@ def get_leader_event_or_404(cursor, leader_id: int, event_id: int):
 def leader_home():
     """
     Leader dashboard page.
-
     Shows:
-    - Upcoming events created by the current leader
+    - Upcoming events created by the current leader (start datetime > NOW())
     - Total number of events created by the current leader
     """
     guard = require_leader_login()
@@ -79,7 +78,7 @@ def leader_home():
             FROM events e
             WHERE e.event_leader_id = %s
               AND COALESCE(e.status, 'upcoming') <> 'cancelled'
-              AND (e.event_date + e.start_time) > NOW()
+              AND (e.event_date::timestamp + e.start_time) > NOW()
             ORDER BY e.event_date ASC, e.start_time ASC
             LIMIT 8;
         """, (leader_id,))
@@ -112,9 +111,9 @@ def leader_browse_events():
     Filters (GET):
     - scope: all / upcoming / past
     - date_from / date_to
-    - location (exact match from dropdown)
-    - event_type (exact match from dropdown)
-    - leader_id (optional dropdown)
+    - location (exact match)
+    - event_type (exact match)
+    - leader_id (optional)
     """
     guard = require_leader_login()
     if guard:
@@ -122,7 +121,6 @@ def leader_browse_events():
 
     current_user_id = session.get('user_id')
 
-    # ---------- Read filters from query string ----------
     scope = request.args.get('scope', 'all').strip()  # all/upcoming/past
     date_from = request.args.get('date_from', '').strip()
     date_to = request.args.get('date_to', '').strip()
@@ -130,7 +128,6 @@ def leader_browse_events():
     event_type = request.args.get('event_type', '').strip()
     leader_id = request.args.get('leader_id', '').strip()
 
-    # ---------- Build SQL ----------
     sql = """
         SELECT
             e.event_id, e.event_name, e.event_date, e.start_time, e.end_time,
@@ -144,14 +141,11 @@ def leader_browse_events():
     """
     params = [current_user_id]
 
-    # Scope filter (NEW)
     if scope == 'upcoming':
         sql += " AND e.event_date >= CURRENT_DATE"
     elif scope == 'past':
         sql += " AND e.event_date < CURRENT_DATE"
-    # scope == 'all' -> no date constraint
 
-    # Date range
     if date_from:
         sql += " AND e.event_date >= %s"
         params.append(date_from)
@@ -160,7 +154,6 @@ def leader_browse_events():
         sql += " AND e.event_date <= %s"
         params.append(date_to)
 
-    # Dropdown filters (exact match)
     if location:
         sql += " AND e.location = %s"
         params.append(location)
@@ -179,11 +172,10 @@ def leader_browse_events():
         cursor.execute(sql, tuple(params))
         events = cursor.fetchall()
 
-        # ---------- Dropdown data (NEW) ----------
         cursor.execute("""
             SELECT DISTINCT event_type
             FROM events
-            WHERE event_type IS NOT NULL AND event_type <> ''
+            WHERE event_type IS NOT NULL AND TRIM(event_type) <> ''
               AND COALESCE(status, 'upcoming') <> 'cancelled'
             ORDER BY event_type;
         """)
@@ -192,7 +184,7 @@ def leader_browse_events():
         cursor.execute("""
             SELECT DISTINCT location
             FROM events
-            WHERE location IS NOT NULL AND location <> ''
+            WHERE location IS NOT NULL AND TRIM(location) <> ''
               AND COALESCE(status, 'upcoming') <> 'cancelled'
             ORDER BY location;
         """)
@@ -219,7 +211,9 @@ def leader_browse_events():
         event_type=event_type,
         location=location,
         leader_id=leader_id,
-        active_page='browse_events')
+        active_page='browse_events'
+    )
+
 
 # ============================================================
 # Create Event
@@ -229,12 +223,8 @@ def leader_browse_events():
 def leader_create_event():
     """
     Create a new cleanup event.
-
     Required:
     - event_name, location, event_date, start_time, end_time, duration
-
-    Optional:
-    - event_type, description, supplies, safety_instructions
     """
     guard = require_leader_login()
     if guard:
@@ -305,9 +295,8 @@ def leader_create_event():
 def leader_manage_events():
     """
     Manage events created by the current leader.
-
     Shows:
-    - All events (past + future)
+    - All non-cancelled events (past + future)
     - Edit / Cancel actions
     """
     guard = require_leader_login()
@@ -331,21 +320,32 @@ def leader_manage_events():
     return render_template(
         'leader/events_manage.html',
         events=events,
-        active_page='my_events')
+        active_page='my_events'
+    )
 
 
 # ============================================================
-# Event Detail 
+# Event Detail
 # ============================================================
 
 @app.route('/leader/events/<int:event_id>')
 def leader_event_detail(event_id: int):
+    """
+    Leader event detail:
+    - Event info
+    - Volunteers list (default hide attendance='cancelled')
+    - Attendance summary (exclude cancelled)
+    - Outcomes (one per event)
+    - Feedback list
+    - Optional: show_cancelled=1 to include cancelled volunteers
+    """
     guard = require_leader_login()
     if guard:
         return guard
 
     leader_id = session['user_id']
     active_tab = request.args.get('tab', 'tab-volunteers')
+    show_cancelled = request.args.get('show_cancelled', '0') == '1'
 
     with db.get_cursor() as cursor:
         # 1) Event (exclude cancelled events)
@@ -369,22 +369,26 @@ def leader_event_detail(event_id: int):
 
         is_mine = (event['event_leader_id'] == leader_id)
 
-        # 2) Volunteers + attendance
-        # Hide removed volunteers by default (attendance='cancelled')
-        cursor.execute("""
+        # 2) Volunteers list (default hide cancelled)
+        sql = """
             SELECT r.volunteer_id,
                    COALESCE(v.full_name, v.username) AS volunteer_name,
                    v.email,
-                   COALESCE(r.attendance, 'registered') AS attendance
+                   v.contact_number,
+                   r.attendance,
+                   r.reminder_flag,
+                   r.registered_at
             FROM eventregistrations r
             JOIN users v ON v.user_id = r.volunteer_id
             WHERE r.event_id = %s
-              AND COALESCE(r.attendance, 'registered') <> 'cancelled'
-            ORDER BY volunteer_name;
-        """, (event_id,))
-        volunteers = cursor.fetchall()
+        """
+        params = [event_id]
+        if not show_cancelled:
+            sql += " AND r.attendance <> 'cancelled'"
+        sql += " ORDER BY volunteer_name ASC;"
 
-        attendance = volunteers  
+        cursor.execute(sql, tuple(params))
+        volunteers = cursor.fetchall()
 
         # 3) Outcomes
         cursor.execute("""
@@ -405,23 +409,25 @@ def leader_event_detail(event_id: int):
         cursor.execute("""
             SELECT f.rating,
                    f.comments,
+                   f.submitted_at,
                    COALESCE(v.full_name, v.username) AS volunteer_name
             FROM feedback f
             JOIN users v ON v.user_id = f.volunteer_id
             WHERE f.event_id = %s
-            ORDER BY f.feedback_id DESC;
+            ORDER BY f.submitted_at DESC, f.feedback_id DESC;
         """, (event_id,))
         feedback_list = cursor.fetchall()
 
-        # 5) Summary (exclude removed)
+        # 5) Summary (exclude cancelled)
         cursor.execute("""
             SELECT
               COUNT(*) AS total_registrations,
+              SUM(CASE WHEN attendance = 'registered' THEN 1 ELSE 0 END) AS registered,
               SUM(CASE WHEN attendance = 'attended' THEN 1 ELSE 0 END) AS attended,
               SUM(CASE WHEN attendance = 'absent' THEN 1 ELSE 0 END) AS absent
             FROM eventregistrations
             WHERE event_id = %s
-              AND COALESCE(attendance, 'registered') <> 'cancelled';
+              AND attendance <> 'cancelled';
         """, (event_id,))
         history_summary = cursor.fetchone()
 
@@ -440,18 +446,27 @@ def leader_event_detail(event_id: int):
         event=event,
         is_mine=is_mine,
         volunteers=volunteers,
-        attendance=attendance,  
         outcomes=outcomes,
         feedback_list=feedback_list,
         history_summary=history_summary,
         active_tab=active_tab,
-        active_page='browse_events')
+        show_cancelled=show_cancelled,
+        active_page='browse_events'
+    )
+
+
 # ============================================================
-# Remove volunteer (soft remove)
+# Remove volunteer (soft remove -> attendance='cancelled')
 # ============================================================
+
 @app.route('/leader/events/<int:event_id>/volunteers/<int:volunteer_id>/remove', methods=['POST'])
 def leader_remove_volunteer(event_id: int, volunteer_id: int):
-    """Soft remove a volunteer by marking attendance as 'cancelled'."""
+    """
+    Soft remove a volunteer by marking attendance as 'cancelled' (enum-safe).
+    IMPORTANT:
+    - Volunteer can re-register later IF volunteer side uses UPSERT.
+    - Clear reminder flags so removed volunteer won't see reminders.
+    """
     guard = require_leader_login()
     if guard:
         return guard
@@ -460,12 +475,14 @@ def leader_remove_volunteer(event_id: int, volunteer_id: int):
 
     with db.get_cursor() as cursor:
         event = get_leader_event_or_404(cursor, leader_id, event_id)
-        if not event:
+        if not event or event.get('status') == 'cancelled':
             return access_denied()
 
         cursor.execute("""
             UPDATE eventregistrations
-            SET attendance = 'cancelled'
+            SET attendance = 'cancelled',
+                reminder_flag = FALSE,
+                reminder_message = NULL
             WHERE event_id = %s AND volunteer_id = %s;
         """, (event_id, volunteer_id))
 
@@ -476,8 +493,13 @@ def leader_remove_volunteer(event_id: int, volunteer_id: int):
 # ============================================================
 # Leader: Update attendance (owner-only)
 # ============================================================
+
 @app.route('/leader/events/<int:event_id>/attendance', methods=['POST'])
 def leader_update_attendance(event_id: int):
+    """
+    Update attendance for a volunteer in a leader-owned event.
+    Allowed: registered / attended / absent / cancelled
+    """
     guard = require_leader_login()
     if guard:
         return guard
@@ -486,7 +508,6 @@ def leader_update_attendance(event_id: int):
     volunteer_id = request.form.get('volunteer_id', type=int)
     new_status = request.form.get('attendance', type=str)
 
-    # IMPORTANT: match your DB enum values
     allowed_statuses = {'registered', 'attended', 'absent', 'cancelled'}
     if not volunteer_id or not new_status or new_status not in allowed_statuses:
         flash("Invalid attendance update.", "warning")
@@ -516,9 +537,12 @@ def leader_update_attendance(event_id: int):
 
     flash("Attendance updated.", "success")
     return redirect(url_for('leader_event_detail', event_id=event_id, tab='tab-attendance'))
+
+
 # ============================================================
 # Leader: Record / Update outcomes (owner-only, Upsert)
 # ============================================================
+
 @app.route('/leader/events/<int:event_id>/outcomes', methods=['POST'])
 def leader_record_outcomes(event_id: int):
     guard = require_leader_login()
@@ -527,19 +551,16 @@ def leader_record_outcomes(event_id: int):
 
     leader_id = session['user_id']
 
-    # --- Read form values (safe defaults) ---
     num_attendees = request.form.get('num_attendees', type=int) or 0
     bags_collected = request.form.get('bags_collected', type=int) or 0
     recyclables_sorted = request.form.get('recyclables_sorted', type=int) or 0
     other_achievements = (request.form.get('other_achievements') or "").strip()
 
-    # --- Basic validation (non-negative) ---
     if num_attendees < 0 or bags_collected < 0 or recyclables_sorted < 0:
         flash("Outcomes values must be non-negative.", "warning")
         return redirect(url_for('leader_event_detail', event_id=event_id, tab='tab-outcomes'))
 
     with db.get_cursor() as cursor:
-        # --- Ensure event exists and leader owns it ---
         cursor.execute("""
             SELECT event_leader_id, COALESCE(status, 'upcoming') AS status
             FROM events
@@ -555,8 +576,6 @@ def leader_record_outcomes(event_id: int):
             flash("You can only record outcomes for your own events.", "danger")
             return redirect(url_for('leader_event_detail', event_id=event_id, tab='tab-outcomes'))
 
-        # --- Upsert outcomes ---
-        # Requires UNIQUE(event_id) or PRIMARY KEY(event_id) on eventoutcomes
         cursor.execute("""
             INSERT INTO eventoutcomes (
                 event_id,
@@ -587,18 +606,14 @@ def leader_record_outcomes(event_id: int):
 
     flash("Outcomes recorded.", "success")
     return redirect(url_for('leader_event_detail', event_id=event_id, tab='tab-outcomes'))
+
+
 # ============================================================
-# Edit Event
+# Edit Event (owner-only)
 # ============================================================
 
 @app.route('/leader/events/<int:event_id>/edit', methods=['GET', 'POST'])
 def leader_edit_event(event_id: int):
-    """
-    Edit an event created by the current leader.
-
-    Required:
-    - event_name, location, event_date, start_time, end_time, duration
-    """
     guard = require_leader_login()
     if guard:
         return guard
@@ -608,7 +623,7 @@ def leader_edit_event(event_id: int):
     with db.get_cursor() as cursor:
         event = get_leader_event_or_404(cursor, leader_id, event_id)
 
-    if not event:
+    if not event or event.get('status') == 'cancelled':
         flash("Event not found or you do not have permission.", "warning")
         return redirect(url_for('leader_manage_events'))
 
@@ -647,7 +662,8 @@ def leader_edit_event(event_id: int):
                     supplies=%s,
                     safety_instructions=%s,
                     updated_at=NOW()
-                WHERE event_id=%s AND event_leader_id=%s;
+                WHERE event_id=%s AND event_leader_id=%s
+                  AND COALESCE(status,'upcoming') <> 'cancelled';
             """, (
                 event_name,
                 location,
@@ -670,7 +686,8 @@ def leader_edit_event(event_id: int):
         'leader/event_form.html',
         mode="edit",
         event=event,
-        active_page='my_events')
+        active_page='my_events'
+    )
 
 
 # ============================================================
@@ -681,11 +698,9 @@ def leader_edit_event(event_id: int):
 def leader_cancel_event(event_id: int):
     """
     Cancel an event (soft cancel).
-
-    Notes:
-    - Keeps registrations/outcomes/feedback for history and reports.
-    - Sets events.status = 'cancelled'.
-    - Marks all still-registered volunteers as attendance='cancelled'.
+    - events.status = 'cancelled'
+    - set all attendance='registered' to 'cancelled'
+    - clear reminders
     """
     guard = require_leader_login()
     if guard:
@@ -707,7 +722,9 @@ def leader_cancel_event(event_id: int):
 
         cursor.execute("""
             UPDATE eventregistrations
-            SET attendance='cancelled'
+            SET attendance='cancelled',
+                reminder_flag=FALSE,
+                reminder_message=NULL
             WHERE event_id=%s AND attendance='registered';
         """, (event_id,))
 
@@ -716,52 +733,56 @@ def leader_cancel_event(event_id: int):
 
 
 # ============================================================
-# Volunteers List + remove volunteer
+# Volunteers List (owner-only)
 # ============================================================
 
 @app.route('/leader/events/<int:event_id>/volunteers')
 def leader_event_volunteers(event_id: int):
     """
-    View the list of volunteers registered for a leader-owned event.
-
-    Includes:
-    - Volunteer list
-    - Attendance update controls
-    - Remove volunteer action
-    - Reminder action 
+    Dedicated volunteers list page (owner-only).
+    Default hides cancelled.
+    Use ?show_cancelled=1 to include cancelled.
     """
     guard = require_leader_login()
     if guard:
         return guard
 
     leader_id = session['user_id']
+    show_cancelled = request.args.get('show_cancelled', '0') == '1'
 
     with db.get_cursor() as cursor:
         event = get_leader_event_or_404(cursor, leader_id, event_id)
-        if not event:
+        if not event or event.get('status') == 'cancelled':
             flash("Event not found or you do not have permission.", "warning")
             return redirect(url_for('leader_manage_events'))
 
-        cursor.execute("""
+        sql = """
             SELECT r.volunteer_id,
                    COALESCE(u.full_name, u.username) AS full_name,
+                   u.email,
                    u.contact_number,
                    r.attendance,
-                   r.reminder_flag
+                   r.reminder_flag,
+                   r.registered_at
             FROM eventregistrations r
             JOIN users u ON u.user_id = r.volunteer_id
             WHERE r.event_id = %s
-            ORDER BY full_name ASC;
-        """, (event_id,))
+        """
+        params = [event_id]
+        if not show_cancelled:
+            sql += " AND r.attendance <> 'cancelled'"
+        sql += " ORDER BY full_name ASC;"
+
+        cursor.execute(sql, tuple(params))
         volunteers = cursor.fetchall()
 
     return render_template(
         'leader/event_volunteers.html',
         event=event,
         volunteers=volunteers,
+        show_cancelled=show_cancelled,
         active_page='my_events'
     )
-
 
 
 # ============================================================
@@ -772,8 +793,6 @@ def leader_event_volunteers(event_id: int):
 def leader_volunteer_history():
     """
     Participation history summary for volunteers across events managed by the current leader.
-
-    
     """
     guard = require_leader_login()
     if guard:
@@ -794,6 +813,7 @@ def leader_volunteer_history():
         JOIN events e ON e.event_id = r.event_id
         JOIN users u ON u.user_id = r.volunteer_id
         WHERE e.event_leader_id = %s
+          AND COALESCE(e.status,'upcoming') <> 'cancelled'
     """
     params = [leader_id]
 
@@ -832,7 +852,7 @@ def leader_volunteer_history_detail(volunteer_id: int):
 
     with db.get_cursor() as cursor:
         cursor.execute("""
-            SELECT COALESCE(full_name, username) AS full_name, contact_number
+            SELECT COALESCE(full_name, username) AS full_name, contact_number, email
             FROM users
             WHERE user_id=%s;
         """, (volunteer_id,))
@@ -850,6 +870,7 @@ def leader_volunteer_history_detail(volunteer_id: int):
             FROM eventregistrations r
             JOIN events e ON e.event_id = r.event_id
             WHERE e.event_leader_id = %s AND r.volunteer_id = %s
+              AND COALESCE(e.status,'upcoming') <> 'cancelled'
             ORDER BY e.event_date DESC, e.start_time DESC;
         """, (leader_id, volunteer_id))
         history = cursor.fetchall()
@@ -870,27 +891,23 @@ def leader_volunteer_history_detail(volunteer_id: int):
 def leader_send_reminder(event_id: int):
     """
     Send a reminder for an event.
-
-    Behaviour:
-    - Sets reminder_flag = TRUE and reminder_message for registered volunteers.
-    - Volunteers will see the reminder popup on next login (volunteer dashboard logic).
+    - Only for upcoming events (status='upcoming' and date >= today)
+    - Only to attendance='registered'
     """
     guard = require_leader_login()
     if guard:
         return guard
 
     leader_id = session['user_id']
-    message = request.form.get('message', '').strip()
+    message = (request.form.get('message') or '').strip()
     if not message:
         message = "Reminder: you have an upcoming cleanup event. Please check details on your dashboard."
 
     with db.get_cursor() as cursor:
         event = get_leader_event_or_404(cursor, leader_id, event_id)
-        if not event:
+        if not event or event.get('status') == 'cancelled':
             return access_denied()
 
-        # Only allow reminders for upcoming events
-        
         cursor.execute("""
             SELECT 1
             FROM events
@@ -909,7 +926,7 @@ def leader_send_reminder(event_id: int):
             SET reminder_flag = TRUE,
                 reminder_message = %s
             WHERE event_id = %s
-              AND COALESCE(attendance,'registered') = 'registered';
+              AND attendance = 'registered';
         """, (message, event_id))
 
     flash("Reminder sent (will popup on volunteer login).", "success")
@@ -939,27 +956,38 @@ def leader_review_feedback():
                    f.volunteer_id,
                    COALESCE(u.full_name, u.username) AS full_name,
                    f.rating,
-                   f.comments
+                   f.comments,
+                   f.submitted_at
             FROM feedback f
             JOIN events e ON e.event_id = f.event_id
             JOIN users u ON u.user_id = f.volunteer_id
             WHERE e.event_leader_id = %s
-            ORDER BY e.event_date DESC, f.rating ASC;
+              AND COALESCE(e.status,'upcoming') <> 'cancelled'
+            ORDER BY e.event_date DESC, f.rating ASC, f.submitted_at DESC;
         """, (leader_id,))
         rows = cursor.fetchall()
 
     return render_template(
         'leader/feedback_list.html',
         rows=rows,
-        active_page='feedback')
+        active_page='feedback'
+    )
 
 
-    
 # ============================================================
 # Leader: Event Reports (summary list)
 # ============================================================
+
 @app.route('/leader/reports')
 def leader_reports():
+    """
+    Report summary list for leader-owned events.
+    Includes:
+    - registered/attended/absent/cancelled counts
+    - feedback count + avg rating
+    - outcome recorded + outcome fields
+    Filters: date_from/date_to (event_date)
+    """
     guard = require_leader_login()
     if guard:
         return guard
@@ -976,17 +1004,19 @@ def leader_reports():
             e.start_time,
             e.end_time,
             e.location,
+            e.event_type,
             COALESCE(e.status, 'upcoming') AS status,
 
             COALESCE(reg.registered_count, 0) AS registered_count,
             COALESCE(reg.attended_count, 0) AS attended_count,
             COALESCE(reg.absent_count, 0) AS absent_count,
+            COALESCE(reg.cancelled_count, 0) AS cancelled_count,
 
             COALESCE(fb.feedback_count, 0) AS feedback_count,
             fb.avg_rating AS avg_rating,
 
-            -- Outcomes 
             (o.outcome_id IS NOT NULL) AS outcome_recorded,
+            o.num_attendees,
             o.bags_collected,
             o.recyclables_sorted,
             o.other_achievements,
@@ -997,11 +1027,11 @@ def leader_reports():
         LEFT JOIN (
             SELECT
                 event_id,
-                SUM(CASE WHEN COALESCE(attendance,'registered')='registered' THEN 1 ELSE 0 END) AS registered_count,
+                SUM(CASE WHEN attendance='registered' THEN 1 ELSE 0 END) AS registered_count,
                 SUM(CASE WHEN attendance='attended' THEN 1 ELSE 0 END) AS attended_count,
-                SUM(CASE WHEN attendance='absent' THEN 1 ELSE 0 END) AS absent_count
+                SUM(CASE WHEN attendance='absent' THEN 1 ELSE 0 END) AS absent_count,
+                SUM(CASE WHEN attendance='cancelled' THEN 1 ELSE 0 END) AS cancelled_count
             FROM eventregistrations
-            WHERE COALESCE(attendance,'registered') <> 'cancelled'
             GROUP BY event_id
         ) reg ON reg.event_id = e.event_id
 
@@ -1014,8 +1044,7 @@ def leader_reports():
             GROUP BY event_id
         ) fb ON fb.event_id = e.event_id
 
-        LEFT JOIN eventoutcomes o
-               ON o.event_id = e.event_id
+        LEFT JOIN eventoutcomes o ON o.event_id = e.event_id
 
         WHERE e.event_leader_id = %s
           AND COALESCE(e.status,'upcoming') <> 'cancelled'
@@ -1041,15 +1070,22 @@ def leader_reports():
         filters={'date_from': date_from, 'date_to': date_to},
         active_page='reports'
     )
-    
-    
-    
+
+
 # ============================================================
 # Leader: Event Report Detail
 # ============================================================
+
 @app.route('/leader/reports/events/<int:event_id>')
 def leader_event_report_detail(event_id: int):
-    """Leader view: detailed report for one event (attendance + engagement)."""
+    """
+    Detailed report for one event:
+    - event info
+    - volunteers list (include cancelled for audit)
+    - attendance summary (include cancelled)
+    - feedback list + summary
+    - outcomes detail
+    """
     guard = require_leader_login()
     if guard:
         return guard
@@ -1057,11 +1093,10 @@ def leader_event_report_detail(event_id: int):
     leader_id = session['user_id']
 
     with db.get_cursor() as cursor:
-        # ---------------------------------------------------------
-        # Event basic info (owner-only)
-        # ---------------------------------------------------------
         cursor.execute("""
-            SELECT e.event_id, e.event_name, e.event_date, e.start_time, e.end_time, e.location,
+            SELECT e.event_id, e.event_name, e.event_date, e.start_time, e.end_time,
+                   e.location, e.event_type,
+                   COALESCE(e.status, 'upcoming') AS status,
                    COALESCE(u.full_name, u.username) AS leader_name
             FROM events e
             LEFT JOIN users u ON u.user_id = e.event_leader_id
@@ -1072,27 +1107,33 @@ def leader_event_report_detail(event_id: int):
 
         if not event:
             flash("Event not found or you do not have permission.", "warning")
-            return redirect(url_for('leader_reports'))  # <-- IMPORTANT: list endpoint
+            return redirect(url_for('leader_reports'))
 
-        # ---------------------------------------------------------
-        # Volunteers + attendance list (exclude cancelled)
-        # ---------------------------------------------------------
         cursor.execute("""
             SELECT r.volunteer_id,
                    COALESCE(u.full_name, u.username) AS full_name,
                    u.contact_number,
-                   COALESCE(r.attendance, 'registered') AS attendance
+                   u.email,
+                   r.attendance,
+                   r.registered_at
             FROM eventregistrations r
             JOIN users u ON u.user_id = r.volunteer_id
             WHERE r.event_id=%s
-              AND COALESCE(r.attendance,'registered') <> 'cancelled'
             ORDER BY full_name ASC;
         """, (event_id,))
         volunteers = cursor.fetchall()
 
-        # ---------------------------------------------------------
-        # Feedback list (engagement details)
-        # ---------------------------------------------------------
+        cursor.execute("""
+            SELECT
+                SUM(CASE WHEN attendance='registered' THEN 1 ELSE 0 END) AS registered_count,
+                SUM(CASE WHEN attendance='attended' THEN 1 ELSE 0 END) AS attended_count,
+                SUM(CASE WHEN attendance='absent' THEN 1 ELSE 0 END) AS absent_count,
+                SUM(CASE WHEN attendance='cancelled' THEN 1 ELSE 0 END) AS cancelled_count
+            FROM eventregistrations
+            WHERE event_id=%s;
+        """, (event_id,))
+        att_sum = cursor.fetchone()
+
         cursor.execute("""
             SELECT COALESCE(u.full_name, u.username) AS full_name,
                    f.rating, f.comments, f.submitted_at
@@ -1103,31 +1144,14 @@ def leader_event_report_detail(event_id: int):
         """, (event_id,))
         feedback_rows = cursor.fetchall()
 
-        # ---------------------------------------------------------
-        # Summary blocks (attendance + engagement)
-        # ---------------------------------------------------------
         cursor.execute("""
-            SELECT
-                SUM(CASE WHEN COALESCE(attendance,'registered')='registered' THEN 1 ELSE 0 END) AS registered_count,
-                SUM(CASE WHEN attendance='attended' THEN 1 ELSE 0 END) AS attended_count,
-                SUM(CASE WHEN attendance='absent' THEN 1 ELSE 0 END) AS absent_count
-            FROM eventregistrations
-            WHERE event_id=%s
-              AND COALESCE(attendance,'registered') <> 'cancelled';
-        """, (event_id,))
-        att_sum = cursor.fetchone()
-
-        cursor.execute("""
-            SELECT
-                COUNT(*) AS feedback_count,
-                AVG(rating)::numeric(10,2) AS avg_rating
+            SELECT COUNT(*) AS feedback_count,
+                   AVG(rating)::numeric(10,2) AS avg_rating
             FROM feedback
             WHERE event_id=%s;
         """, (event_id,))
         fb_sum = cursor.fetchone()
-        # ---------------------------------------------------------
-        # Outcomes (bags/recyclables/other achievements)
-        # ---------------------------------------------------------
+
         cursor.execute("""
             SELECT
                 o.num_attendees,
@@ -1138,7 +1162,7 @@ def leader_event_report_detail(event_id: int):
                 COALESCE(u.full_name, u.username) AS recorded_by_name
             FROM eventoutcomes o
             LEFT JOIN users u ON u.user_id = o.recorded_by
-            WHERE o.event_id = %s;
+            WHERE o.event_id=%s;
         """, (event_id,))
         outcome = cursor.fetchone()
 
@@ -1151,5 +1175,4 @@ def leader_event_report_detail(event_id: int):
         fb_sum=fb_sum,
         outcome=outcome,
         active_page='reports'
-        
     )

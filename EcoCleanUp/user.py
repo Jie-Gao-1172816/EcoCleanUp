@@ -1,10 +1,9 @@
-
-
-
 from EcoCleanUp import app, db
 from flask import redirect, render_template, request, session, url_for, flash
 from flask_bcrypt import Bcrypt
 from werkzeug.utils import secure_filename
+import psycopg2
+from psycopg2 import IntegrityError
 import os
 import re
 import uuid
@@ -135,29 +134,29 @@ def logout():
 # Volunteer Registration (Signup)
 # ============================================================
 
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    """
-    Volunteer registration only:
-    - Role is always 'volunteer'
-    - Useful validation hints and errors shown inline
-    - Includes password confirmation (double entry)
-    """
+    """Volunteer self-registration (role fixed to 'volunteer')."""
     if session.get('loggedin'):
         return redirect(user_home_url())
 
     if request.method == 'POST':
-        # Collect form fields
-        username = request.form.get('username', '').strip()
-        full_name = request.form.get('full_name', '').strip()
-        email = request.form.get('email', '').strip()
-        contact_number = request.form.get('contact_number', '').strip()
-        home_address = request.form.get('home_address', '').strip()
-        environmental_interests = request.form.get('environmental_interests', '').strip()
+        # --------------------
+        # Read form fields
+        # --------------------
+        username = (request.form.get('username') or '').strip()
+        full_name = (request.form.get('full_name') or '').strip()
+        email = (request.form.get('email') or '').strip()
+        contact_number = (request.form.get('contact_number') or '').strip()
+        home_address = (request.form.get('home_address') or '').strip()
+        environmental_interests = (request.form.get('environmental_interests') or '').strip()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
 
-        # Errors passed to template
+        # --------------------
+        # Inline error fields
+        # --------------------
         username_error = None
         email_error = None
         password_error = None
@@ -167,8 +166,11 @@ def signup():
         address_error = None
         interests_error = None
         image_error = None
+        signup_error = None
 
-        # ---------- Username validation ----------
+        # --------------------
+        # Username
+        # --------------------
         if not username:
             username_error = "Username is required."
         elif len(username) > 50:
@@ -177,17 +179,21 @@ def signup():
             username_error = "Username can only contain letters, numbers, and dots."
         else:
             with db.get_cursor() as cursor:
-                cursor.execute("SELECT 1 FROM users WHERE username = %s;", (username,))
+                cursor.execute("SELECT 1 FROM users WHERE username=%s;", (username,))
                 if cursor.fetchone() is not None:
                     username_error = "An account already exists with this username."
 
-        # ---------- Full name ----------
+        # --------------------
+        # Full name
+        # --------------------
         if not full_name:
             full_name_error = "Full name is required."
         elif len(full_name) > 100:
             full_name_error = "Full name cannot exceed 100 characters."
 
-        # ---------- Email ----------
+        # --------------------
+        # Email
+        # --------------------
         if not email:
             email_error = "Email is required."
         elif len(email) > 100:
@@ -195,14 +201,16 @@ def signup():
         elif not re.fullmatch(r'[^@]+@[^@]+\.[^@]+', email):
             email_error = "Invalid email address."
 
-        # ---------- Password rules ----------
+        # --------------------
+        # Password
+        # --------------------
         password_error = validate_password(password)
-
-        # Password confirmation (double entry)
         if password and password != confirm_password:
             confirm_error = "Password and confirmation do not match."
 
-        # ---------- Contact / Address / Interests ----------
+        # --------------------
+        # Contact / Address / Interests
+        # --------------------
         if not contact_number:
             contact_error = "Contact number is required."
         elif len(contact_number) > 20:
@@ -218,32 +226,37 @@ def signup():
         elif len(environmental_interests) > 255:
             interests_error = "Environmental interests cannot exceed 255 characters."
 
-        # ---------- Optional image upload ----------
+        # --------------------
+        # Optional image upload
+        # --------------------
         profile_image_filename = None
         file = request.files.get('profile_image')
         if file and file.filename:
             if not allowed_file(file.filename):
                 image_error = "Profile image must be png/jpg/jpeg/gif/webp."
             else:
-                safe_name = secure_filename(file.filename)
-                _, ext = os.path.splitext(safe_name)
-                profile_image_filename = f"{username}{ext.lower()}"
-                file.save(os.path.join(UPLOAD_FOLDER, profile_image_filename))
+                try:
+                    safe_name = secure_filename(file.filename)
+                    _, ext = os.path.splitext(safe_name)
+                    profile_image_filename = f"{username}{ext.lower()}"
+                    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                    file.save(os.path.join(UPLOAD_FOLDER, profile_image_filename))
+                except Exception:
+                    image_error = "Could not save profile image. Please try again."
 
-        # If any validation error occurred, re-render signup page with hints
+        # --------------------
+        # If errors -> re-render
+        # --------------------
         if (username_error or full_name_error or email_error or password_error or confirm_error or
                 contact_error or address_error or interests_error or image_error):
             return render_template(
                 'signup.html',
-                # preserve user input
                 username=username,
                 full_name=full_name,
                 email=email,
                 contact_number=contact_number,
                 home_address=home_address,
                 environmental_interests=environmental_interests,
-
-                # errors
                 username_error=username_error,
                 full_name_error=full_name_error,
                 email_error=email_error,
@@ -252,10 +265,13 @@ def signup():
                 contact_error=contact_error,
                 address_error=address_error,
                 interests_error=interests_error,
-                image_error=image_error
+                image_error=image_error,
+                signup_error=signup_error
             )
 
-        # Hash password before storing (never store plaintext)
+        # --------------------
+        # Insert user
+        # --------------------
         password_hash = flask_bcrypt.generate_password_hash(password).decode('utf-8')
 
         try:
@@ -271,11 +287,10 @@ def signup():
                     username, password_hash, full_name, email,
                     contact_number, home_address, environmental_interests,
                     profile_image_filename,
-                    DEFAULT_USER_ROLE, 'active'
+                    'volunteer', 'active'
                 ))
-                db.connection.commit()
         except Exception:
-            # Defensive: unexpected failure (e.g. race on unique constraint)
+            # Keep it simple: most failures here are duplicate username or DB issues
             username_error = "Could not create account. Please try a different username."
             return render_template(
                 'signup.html',
@@ -288,11 +303,9 @@ def signup():
                 username_error=username_error
             )
 
-        # Show success message on the same page 
         return render_template('signup.html', signup_successful=True)
 
     return render_template('signup.html')
-
 
 # ============================================================
 # Profile View & Edit (All Roles)

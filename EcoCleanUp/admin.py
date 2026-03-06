@@ -66,7 +66,8 @@ def admin_home():
         total_event_leaders=total_event_leaders,
         total_admins=total_admins,
         total_feedback=total_feedback,
-        avg_rating=avg_rating)
+        avg_rating=avg_rating
+    )
 
 
 # ============================================================
@@ -121,7 +122,8 @@ def admin_users():
         users=users,
         keyword=keyword,
         role=role,
-        status=status)
+        status=status
+    )
 
 
 # ============================================================
@@ -151,17 +153,15 @@ def admin_change_user_status(user_id):
     return redirect(request.referrer or url_for('admin_users'))
 
 
-
-
 # ============================================================
-# Admin: Volunteer participation history (past events + attendance)
+# Admin: Volunteer participation history
 # ============================================================
 
 @app.route('/admin/participation-history')
 def admin_participation_history():
     """
     Admin view: participation summary for ALL volunteers.
-    Similar to leader participation history.
+    Excludes attendance='cancelled' from joined/attended (soft removed).
     """
     guard = require_admin()
     if guard:
@@ -176,10 +176,7 @@ def admin_participation_history():
                 COALESCE(u.full_name, u.username) AS full_name,
                 u.contact_number,
 
-                -- total joined = count of registrations excluding soft removed
                 COALESCE(reg.total_joined, 0) AS total_joined,
-
-                -- total attended = attended count excluding soft removed
                 COALESCE(reg.total_attended, 0) AS total_attended
             FROM users u
             LEFT JOIN (
@@ -188,7 +185,7 @@ def admin_participation_history():
                     COUNT(*) AS total_joined,
                     SUM(CASE WHEN attendance = 'attended' THEN 1 ELSE 0 END) AS total_attended
                 FROM eventregistrations
-                WHERE COALESCE(attendance, 'registered') <> 'cancelled'
+                WHERE attendance <> 'cancelled'
                 GROUP BY volunteer_id
             ) reg ON reg.volunteer_id = u.user_id
             WHERE u.role = 'volunteer'
@@ -203,6 +200,8 @@ def admin_participation_history():
         keyword=keyword,
         active_page='users'
     )
+
+
 @app.route('/admin/users/<int:user_id>/history')
 def admin_user_history(user_id):
     """
@@ -248,7 +247,9 @@ def admin_user_history(user_id):
         'admin/user_history.html',
         volunteer=volunteer,
         history=history,
-        user_id=user_id)
+        user_id=user_id
+    )
+
 
 # ============================================================
 # Manage Events (Admin sees ALL events)
@@ -264,25 +265,26 @@ def admin_events():
     - location
     - event_type
     - leader_id
+    Extra:
+    - show_cancelled=1 to include cancelled events
     """
-    if 'loggedin' not in session:
-        return redirect(url_for('login'))
-    if session.get('role') != 'admin':
-        return access_denied()
+    guard = require_admin()
+    if guard:
+        return guard
 
-    # -------------------- Read filters --------------------
     scope = request.args.get('scope', 'all').strip().lower()
     date_from = request.args.get('date_from', '').strip()
     date_to = request.args.get('date_to', '').strip()
     location = request.args.get('location', '').strip()
     event_type = request.args.get('event_type', '').strip()
-    leader_id = request.args.get('leader_id', '').strip()  # string from query
+    leader_id = request.args.get('leader_id', '').strip()
+    show_cancelled = request.args.get('show_cancelled', '0') == '1'
 
-    # -------------------- Base SQL --------------------
     sql = """
         SELECT e.event_id, e.event_name, e.location, e.event_type,
                e.event_date, e.start_time, e.end_time, e.duration,
                e.event_leader_id,
+               COALESCE(e.status, 'upcoming') AS status,
                COALESCE(u.full_name, u.username) AS leader_name
         FROM events e
         LEFT JOIN users u ON u.user_id = e.event_leader_id
@@ -290,13 +292,15 @@ def admin_events():
     """
     params = []
 
-    # -------------------- Scope filter --------------------
+    # Default: hide cancelled (this fixes your “deleted but still shows” feeling)
+    if not show_cancelled:
+        sql += " AND COALESCE(e.status,'upcoming') <> 'cancelled'"
+
     if scope == 'upcoming':
         sql += " AND (e.event_date::timestamp + e.start_time) > NOW()"
     elif scope == 'past':
         sql += " AND (e.event_date::timestamp + e.start_time) <= NOW()"
 
-    # -------------------- Date range filter --------------------
     if date_from:
         sql += " AND e.event_date >= %s"
         params.append(date_from)
@@ -305,51 +309,49 @@ def admin_events():
         sql += " AND e.event_date <= %s"
         params.append(date_to)
 
-    # -------------------- Location filter --------------------
     if location:
         sql += " AND e.location = %s"
         params.append(location)
 
-    # -------------------- Type filter --------------------
     if event_type:
         sql += " AND e.event_type = %s"
         params.append(event_type)
 
-    # -------------------- Leader filter --------------------
     if leader_id:
         try:
             leader_id_int = int(leader_id)
             sql += " AND e.event_leader_id = %s"
             params.append(leader_id_int)
         except Exception:
-            leader_id = ''  # ignore invalid leader id
+            leader_id = ''
 
     sql += " ORDER BY e.event_date DESC, e.start_time DESC;"
 
     with db.get_cursor() as cursor:
-        # 1) Events list
         cursor.execute(sql, tuple(params))
         events = cursor.fetchall()
 
-        # 2) Type dropdown options
+        # Dropdown options: types (exclude cancelled by default)
         cursor.execute("""
             SELECT DISTINCT event_type
             FROM events
-            WHERE event_type IS NOT NULL
+            WHERE event_type IS NOT NULL AND TRIM(event_type) <> ''
+              AND COALESCE(status,'upcoming') <> 'cancelled'
             ORDER BY event_type;
         """)
         types = cursor.fetchall()
 
-        # 3) Location dropdown options
+        # Dropdown options: locations
         cursor.execute("""
             SELECT DISTINCT location
             FROM events
             WHERE location IS NOT NULL AND TRIM(location) <> ''
+              AND COALESCE(status,'upcoming') <> 'cancelled'
             ORDER BY location;
         """)
         locations = cursor.fetchall()
 
-        # 4) Leader dropdown options (event leaders only)
+        # Leader dropdown options
         cursor.execute("""
             SELECT user_id, COALESCE(full_name, username) AS leader_name
             FROM users
@@ -369,19 +371,27 @@ def admin_events():
         date_to=date_to,
         location=location,
         event_type=event_type,
-        leader_id=leader_id)
+        leader_id=leader_id,
+        show_cancelled=show_cancelled
+    )
+
 
 @app.route('/admin/events/<int:event_id>/volunteers')
 def admin_event_volunteers(event_id):
-    """Admin view: list of volunteers registered for a particular event."""
-    if 'loggedin' not in session:
-        return redirect(url_for('login'))
-    if session.get('role') != 'admin':
-        return access_denied()
+    """
+    Admin view: list of volunteers registered for a particular event.
+    Default hide cancelled registrations; use ?show_cancelled=1 to include.
+    """
+    guard = require_admin()
+    if guard:
+        return guard
+
+    show_cancelled = request.args.get('show_cancelled', '0') == '1'
 
     with db.get_cursor() as cursor:
         cursor.execute("""
             SELECT e.event_id, e.event_name, e.event_date, e.start_time, e.end_time, e.location,
+                   COALESCE(e.status,'upcoming') AS status,
                    COALESCE(u.full_name, u.username) AS leader_name
             FROM events e
             LEFT JOIN users u ON u.user_id = e.event_leader_id
@@ -393,7 +403,7 @@ def admin_event_volunteers(event_id):
             flash("Event not found.", "warning")
             return redirect(url_for('admin_events'))
 
-        cursor.execute("""
+        sql = """
             SELECT r.volunteer_id,
                    COALESCE(u.full_name, u.username) AS full_name,
                    u.contact_number,
@@ -402,16 +412,28 @@ def admin_event_volunteers(event_id):
             FROM eventregistrations r
             JOIN users u ON u.user_id = r.volunteer_id
             WHERE r.event_id = %s
-            ORDER BY full_name ASC;
-        """, (event_id,))
+        """
+        params = [event_id]
+        if not show_cancelled:
+            sql += " AND r.attendance <> 'cancelled'"
+        sql += " ORDER BY full_name ASC;"
+
+        cursor.execute(sql, tuple(params))
         volunteers = cursor.fetchall()
 
-    return render_template('admin/event_volunteers.html', event=event, volunteers=volunteers)
+    return render_template(
+        'admin/event_volunteers.html',
+        event=event,
+        volunteers=volunteers,
+        show_cancelled=show_cancelled
+    )
 
-
+# ============================================================
+# Edit Event
+# ============================================================
 @app.route('/admin/events/<int:event_id>/edit', methods=['GET', 'POST'])
 def admin_edit_event(event_id):
-    """Admin can edit any event."""
+    """Admin can edit any event (non-cancelled recommended)."""
     guard = require_admin()
     if guard:
         return guard
@@ -445,7 +467,8 @@ def admin_edit_event(event_id):
                 UPDATE events
                 SET event_name=%s, location=%s, event_type=%s, event_date=%s,
                     start_time=%s, end_time=%s, duration=%s, description=%s,
-                    supplies=%s, safety_instructions=%s
+                    supplies=%s, safety_instructions=%s,
+                    updated_at=NOW()
                 WHERE event_id=%s;
             """, (
                 event_name, location, event_type or None, event_date,
@@ -460,19 +483,44 @@ def admin_edit_event(event_id):
     return render_template('admin/event_form.html', event=event)
 
 
+# ============================================================
+# Admin: Cancel Event (SOFT cancel, assignment-friendly)
+# ============================================================
+
 @app.route('/admin/events/<int:event_id>/cancel', methods=['POST'])
 def admin_cancel_event(event_id):
-    """Admin cancels an event ."""
+    """
+    Admin cancels an event (soft cancel):
+    - events.status = 'cancelled'
+    - update_at = NOW()
+    - set registrations 'registered' -> 'cancelled'
+    - clear reminders
+    NOTE:
+    - We do NOT hard delete; keep outcomes/feedback for reports/history.
+    """
     guard = require_admin()
     if guard:
         return guard
 
     with db.get_cursor() as cursor:
-        cursor.execute("DELETE FROM eventregistrations WHERE event_id=%s;", (event_id,))
-        cursor.execute("DELETE FROM feedback WHERE event_id=%s;", (event_id,))
-        cursor.execute("DELETE FROM events WHERE event_id=%s;", (event_id,))
+        # Soft cancel event
+        cursor.execute("""
+            UPDATE events
+            SET status='cancelled',
+                updated_at=NOW()
+            WHERE event_id=%s;
+        """, (event_id,))
 
-    flash("Event cancelled (deleted).", "success")
+        # Cancel still-registered volunteers
+        cursor.execute("""
+            UPDATE eventregistrations
+            SET attendance='cancelled',
+                reminder_flag=FALSE,
+                reminder_message=NULL
+            WHERE event_id=%s AND attendance='registered';
+        """, (event_id,))
+
+    flash("Event cancelled.", "success")
     return redirect(url_for('admin_events'))
 
 
@@ -509,7 +557,8 @@ def admin_platform_report():
         total_volunteers=total_volunteers,
         total_event_leaders=total_event_leaders,
         total_feedback=total_feedback,
-        avg_rating=avg_rating )
+        avg_rating=avg_rating
+    )
 
 
 # ============================================================
@@ -520,10 +569,9 @@ def admin_platform_report():
 def admin_event_reports():
     """
     Admin Event Reports (filtered):
-    - Attendance summary (registered / attended / absent)
-    - Volunteer engagement (feedback count + avg rating)
-    - Volunteer engagement ALSO includes outcomes:
-        bags_collected / recyclables_sorted / other_achievements
+    - Attendance summary (registered / attended / absent) excluding cancelled
+    - Feedback count + avg rating
+    - Outcomes: bags/recyclables/other
     Filters:
       date_from, date_to, leader_id, location, event_type
     """
@@ -531,20 +579,13 @@ def admin_event_reports():
     if guard:
         return guard
 
-    # -----------------------------
-    # Read filters
-    # -----------------------------
     date_from = request.args.get('date_from', '').strip()
     date_to = request.args.get('date_to', '').strip()
     leader_id = request.args.get('leader_id', '').strip()
     location = request.args.get('location', '').strip()
     event_type = request.args.get('event_type', '').strip()
 
-    # -----------------------------
-    # Fetch dropdown options
-    # -----------------------------
     with db.get_cursor() as cursor:
-        # Leaders who have created events
         cursor.execute("""
             SELECT DISTINCT u.user_id, COALESCE(u.full_name, u.username) AS display_name
             FROM events e
@@ -554,29 +595,24 @@ def admin_event_reports():
         """)
         leader_options = cursor.fetchall()
 
-        # Locations that exist in events
         cursor.execute("""
             SELECT DISTINCT e.location
             FROM events e
-            WHERE e.location IS NOT NULL AND e.location <> ''
+            WHERE e.location IS NOT NULL AND TRIM(e.location) <> ''
               AND COALESCE(e.status,'upcoming') <> 'cancelled'
             ORDER BY e.location ASC;
         """)
         location_options = [row['location'] for row in cursor.fetchall()]
 
-        # Event types that exist in events
         cursor.execute("""
             SELECT DISTINCT e.event_type
             FROM events e
-            WHERE e.event_type IS NOT NULL AND e.event_type <> ''
+            WHERE e.event_type IS NOT NULL AND TRIM(e.event_type) <> ''
               AND COALESCE(e.status,'upcoming') <> 'cancelled'
             ORDER BY e.event_type ASC;
         """)
         type_options = [row['event_type'] for row in cursor.fetchall()]
 
-    # -----------------------------
-    # Base query (pre-aggregate then LEFT JOIN)
-    # -----------------------------
     sql = """
         SELECT
             e.event_id,
@@ -593,7 +629,6 @@ def admin_event_reports():
             COALESCE(fb.feedback_count, 0) AS feedback_count,
             fb.avg_rating AS avg_rating,
 
-            -- outcomes (merged into engagement)
             (o.outcome_id IS NOT NULL) AS outcome_recorded,
             o.bags_collected,
             o.recyclables_sorted,
@@ -606,11 +641,11 @@ def admin_event_reports():
         LEFT JOIN (
             SELECT
                 event_id,
-                SUM(CASE WHEN COALESCE(attendance,'registered')='registered' THEN 1 ELSE 0 END) AS registered_count,
+                SUM(CASE WHEN attendance='registered' THEN 1 ELSE 0 END) AS registered_count,
                 SUM(CASE WHEN attendance='attended' THEN 1 ELSE 0 END) AS attended_count,
                 SUM(CASE WHEN attendance='absent' THEN 1 ELSE 0 END) AS absent_count
             FROM eventregistrations
-            WHERE COALESCE(attendance,'registered') <> 'cancelled'
+            WHERE attendance <> 'cancelled'
             GROUP BY event_id
         ) reg ON reg.event_id = e.event_id
 
@@ -623,16 +658,12 @@ def admin_event_reports():
             GROUP BY event_id
         ) fb ON fb.event_id = e.event_id
 
-        LEFT JOIN eventoutcomes o
-               ON o.event_id = e.event_id
+        LEFT JOIN eventoutcomes o ON o.event_id = e.event_id
 
         WHERE COALESCE(e.status,'upcoming') <> 'cancelled'
     """
     params = []
 
-    # -----------------------------
-    # Apply filters
-    # -----------------------------
     if date_from:
         sql += " AND e.event_date >= %s"
         params.append(date_from)
@@ -675,7 +706,6 @@ def admin_event_reports():
         active_page='event_reports'
     )
 
-
 # ============================================================
 # Event Reports detail
 # ============================================================
@@ -685,24 +715,23 @@ def admin_event_report_detail(event_id):
     Admin view: detailed report for one event.
     Includes:
     - Event info
-    - Attendance summary
-    - Volunteer engagement summary (feedback count + avg rating)
-    - Volunteer engagement ALSO includes outcomes:
-        bags_collected / recyclables_sorted / other_achievements
-    - Volunteer list + attendance
+    - Attendance summary (exclude cancelled)
+    - Feedback summary
+    - Outcomes detail
+    - Volunteer list (exclude cancelled by default)
     - Feedback list
     """
     guard = require_admin()
     if guard:
         return guard
 
+    show_cancelled = request.args.get('show_cancelled', '0') == '1'
+
     with db.get_cursor() as cursor:
-        # ---------------------------------------------------------
-        # Event info
-        # ---------------------------------------------------------
         cursor.execute("""
             SELECT e.event_id, e.event_name, e.event_date, e.start_time, e.end_time, e.location,
-                   COALESCE(u.full_name, u.username) AS leader_name
+                   COALESCE(u.full_name, u.username) AS leader_name,
+                   COALESCE(e.status,'upcoming') AS status
             FROM events e
             LEFT JOIN users u ON u.user_id = e.event_leader_id
             WHERE e.event_id=%s;
@@ -713,23 +742,17 @@ def admin_event_report_detail(event_id):
             flash("Event not found.", "warning")
             return redirect(url_for('admin_event_reports'))
 
-        # ---------------------------------------------------------
-        # Attendance summary (same logic as reports)
-        # ---------------------------------------------------------
         cursor.execute("""
             SELECT
-              SUM(CASE WHEN COALESCE(attendance,'registered')='registered' THEN 1 ELSE 0 END) AS registered_count,
+              SUM(CASE WHEN attendance='registered' THEN 1 ELSE 0 END) AS registered_count,
               SUM(CASE WHEN attendance='attended' THEN 1 ELSE 0 END) AS attended_count,
               SUM(CASE WHEN attendance='absent' THEN 1 ELSE 0 END) AS absent_count
             FROM eventregistrations
             WHERE event_id=%s
-              AND COALESCE(attendance,'registered') <> 'cancelled';
+              AND attendance <> 'cancelled';
         """, (event_id,))
         att_sum = cursor.fetchone()
 
-        # ---------------------------------------------------------
-        # Engagement summary (feedback count + avg rating)
-        # ---------------------------------------------------------
         cursor.execute("""
             SELECT
               COUNT(*) AS feedback_count,
@@ -739,9 +762,6 @@ def admin_event_report_detail(event_id):
         """, (event_id,))
         fb_sum = cursor.fetchone()
 
-        # ---------------------------------------------------------
-        # Outcomes (bags / recyclables / other achievements)
-        # ---------------------------------------------------------
         cursor.execute("""
             SELECT
                 o.bags_collected,
@@ -755,10 +775,7 @@ def admin_event_report_detail(event_id):
         """, (event_id,))
         outcome = cursor.fetchone()
 
-        # ---------------------------------------------------------
-        # Volunteers + attendance list (exclude cancelled)
-        # ---------------------------------------------------------
-        cursor.execute("""
+        sql = """
             SELECT r.volunteer_id,
                    COALESCE(u.full_name, u.username) AS full_name,
                    u.contact_number,
@@ -766,32 +783,23 @@ def admin_event_report_detail(event_id):
             FROM eventregistrations r
             JOIN users u ON u.user_id = r.volunteer_id
             WHERE r.event_id=%s
-              AND COALESCE(r.attendance,'registered') <> 'cancelled'
-            ORDER BY full_name ASC;
-        """, (event_id,))
+        """
+        params = [event_id]
+        if not show_cancelled:
+            sql += " AND COALESCE(r.attendance,'registered') <> 'cancelled'"
+        sql += " ORDER BY full_name ASC;"
+
+        cursor.execute(sql, tuple(params))
         volunteers = cursor.fetchall()
 
-        # ---------------------------------------------------------
-        # Feedback list (try with submitted_at; fallback if column doesn't exist)
-        # ---------------------------------------------------------
-        try:
-            cursor.execute("""
-                SELECT COALESCE(u.full_name, u.username) AS full_name,
-                       f.rating, f.comments, f.submitted_at
-                FROM feedback f
-                JOIN users u ON u.user_id = f.volunteer_id
-                WHERE f.event_id=%s
-                ORDER BY f.submitted_at DESC;
-            """, (event_id,))
-        except Exception:
-            cursor.execute("""
-                SELECT COALESCE(u.full_name, u.username) AS full_name,
-                       f.rating, f.comments
-                FROM feedback f
-                JOIN users u ON u.user_id = f.volunteer_id
-                WHERE f.event_id=%s
-                ORDER BY f.rating ASC;
-            """, (event_id,))
+        cursor.execute("""
+            SELECT COALESCE(u.full_name, u.username) AS full_name,
+                   f.rating, f.comments, f.submitted_at
+            FROM feedback f
+            JOIN users u ON u.user_id = f.volunteer_id
+            WHERE f.event_id=%s
+            ORDER BY f.submitted_at DESC;
+        """, (event_id,))
         feedback_rows = cursor.fetchall()
 
     return render_template(
@@ -801,6 +809,7 @@ def admin_event_report_detail(event_id):
         feedback_rows=feedback_rows,
         att_sum=att_sum,
         fb_sum=fb_sum,
-        outcome=outcome,  
+        outcome=outcome,
+        show_cancelled=show_cancelled,
         active_page='event_reports'
     )
